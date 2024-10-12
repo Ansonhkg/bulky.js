@@ -1,0 +1,15 @@
+{
+  "name": "bulkie.js",
+  "version": "0.0.1",
+  "license": "MIT",
+  "scripts": {
+    "dev": "bun run dev.ts"
+  },
+  "dependencies": {
+    "@lit-protocol/constants": "^6.9.0",
+    "@lit-protocol/contracts-sdk": "^6.9.0",
+    "@lit-protocol/lit-node-client": "^6.9.0",
+    "@lit-protocol/types": "^6.9.0",
+    "ethers": "5.7.2"
+  }
+}
