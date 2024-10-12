@@ -1,43 +1,9 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { LIT_NETWORKS_KEYS } from '@lit-protocol/types';
-import { ethers, Signer } from 'ethers';
+import { ethers, Signer, Wallet } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK } from '@lit-protocol/constants';
-
-export const FN = {
-  'connectToLitNodeClient': 'connectToLitNodeClient',
-  'connectToLitContracts': 'connectToLitContracts',
-  'getLitNodeClient': 'getLitNodeClient',
-  'getLitContracts': 'getLitContracts',
-  'mintPKP': 'mintPKP',
-  'getPkps': 'getPkps',
-} as const;
-
-type BulkieSupportedFunctions = keyof typeof FN;
-
-type FunctionReturnTypes = {
-  [FN.connectToLitNodeClient]: LitNodeClient;
-  [FN.connectToLitContracts]: LitContracts;
-  [FN.getLitNodeClient]: LitNodeClient;
-  [FN.getLitContracts]: LitContracts;
-  [FN.mintPKP]: {
-    tokenId: {
-      hex: `0x${string}`;
-      decimal: string;
-    };
-    publicKey: string;
-    ethAddress: `0x${string}`;
-    txHash: `https://${string}/tx/${string}`;
-  };
-  [FN.getPkps]: {
-    tokenId: {
-      hex: `0x${string}`;
-      decimal: string;
-    },
-    publicKey: string;
-    ethAddress: `0x${string}`;
-  }
-}
+import { BulkieSupportedFunctions, FN, FunctionReturnTypes } from './types';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -108,7 +74,11 @@ export class Bulkie {
   }
 
   getOutput<T extends BulkieSupportedFunctions>(fnName: T): FunctionReturnTypes[T] | undefined {
-    return this.outputs.get(fnName) as FunctionReturnTypes[T] | undefined;
+    return;
+  }
+
+  getAllOutputs() {
+    return this.outputs;
   }
 
   // NOTE: There isn't a "getTotalNumberOfPkps" because we need
@@ -153,6 +123,15 @@ export class Bulkie {
 
   }
 
+  public getTotalExecutionTime() {
+    const totalMs = this.executionTimes.reduce((a, b) => a + b, 0);
+    const totalS = totalMs / 1000;
+
+    return {
+      ms: totalMs,
+      s: totalS,
+    };
+  }
   /**
    * ========== Utils ==========
    */
@@ -161,6 +140,7 @@ export class Bulkie {
       console.log(message);
     }
   }
+
   private _debug(message: string) {
     if (this.debug) {
       console.log(`\x1b[90m[bulkie.js] ${message}\x1b[0m`);
@@ -179,6 +159,7 @@ export class Bulkie {
 
       this._checkRequirements(fnName);
 
+      this._debug(`${fnName}()`)
       const result = await action();
 
       const endTime = Date.now();
@@ -196,16 +177,6 @@ export class Bulkie {
     } catch (e) {
       throw new Error(`Error in ${opName}: ${e}`);
     }
-  }
-
-  public getTotalExecutionTime() {
-    const totalMs = this.executionTimes.reduce((a, b) => a + b, 0);
-    const totalS = totalMs / 1000;
-
-    return {
-      ms: totalMs,
-      s: totalS,
-    };
   }
 
   private _checkRequirements(fnName: BulkieSupportedFunctions) {
@@ -260,9 +231,8 @@ export class Bulkie {
   }
 
   /**
-   * ========== Clients ==========
+   * ========== Actions ==========
    */
-
   async connectToLitNodeClient(): Promise<this> {
 
     return this._run(
@@ -313,20 +283,21 @@ export class Bulkie {
         return this;
       },
       [
-        `${FN.mintPKP} (to mint a PKP)`,
+        `${FN.mintPKP} (to mint a PKP - Tip: Pass in { selfFund: true } to fund the PKP).`,
         `${FN.getPkps} (to get all PKPs)`
       ]
     )
   }
 
-  /**
-   * ========== Contracts Actions ==========
-   */
-  async mintPKP() {
+  async mintPKP(params: { selfFund?: boolean, amountInEth?: string }): Promise<this> {
     return this._run(
       'Mint PKP',
       FN.mintPKP,
       async () => {
+
+        const _selfFund = params.selfFund || false;
+        const _amountInEth = params.amountInEth || '0.001';
+
         const res = await this.litContracts.pkpNftContractUtils.write.mint();
 
         const explorerUrl = METAMASK_CHAIN_INFO_BY_NETWORK[this.network].blockExplorerUrls[0]
@@ -334,7 +305,45 @@ export class Bulkie {
         const hexPrefixedPublicKey = `0x${res.pkp.publicKey}`;
         const decimalTokenId = ethers.BigNumber.from(res.pkp.tokenId).toString();
 
-        this._debug(`\n- tokenId:    ${decimalTokenId}\n- publicKey:  ${hexPrefixedPublicKey}\n- ethAddress: ${res.pkp.ethAddress}\n- txHash:     ${hashOnExplorer}`);
+        this._debug(`tokenId:    ${decimalTokenId}`);
+        this._debug(`publicKey:  ${hexPrefixedPublicKey}`);
+        this._debug(`ethAddress: ${res.pkp.ethAddress}`);
+        this._debug(`txHash:     ${hashOnExplorer}`);
+
+        if (_selfFund) {
+          this._debug('----- (Self Funding Enabled) -----');
+          try {
+            const tx = await this.signer?.sendTransaction({
+              to: res.pkp.ethAddress,
+              value: ethers.utils.parseEther(_amountInEth)
+            });
+
+            if (!tx) {
+              throw new Error('Transaction failed. This should never happen.');
+            }
+
+            const receipt = await tx.wait();
+
+            this._debug(`Funding amount:   ${_amountInEth} ETH.`);
+            this._debug(`Transaction hash: ${receipt.transactionHash}`);
+            this._debug(`Explorer:         ${explorerUrl}tx/${receipt.transactionHash}`);
+
+            const pkpBalance = await this.signer?.provider?.getBalance(res.pkp.ethAddress);
+
+            if (pkpBalance) {
+              this._debug(`PKP balance:      ${ethers.utils.formatEther(pkpBalance)} ETH`);
+            }
+
+            const signerBalance = await this.signer?.getBalance();
+
+            if (signerBalance) {
+              this._debug(`Signer balance:   ${ethers.utils.formatEther(signerBalance)} ETH`);
+            }
+
+          } catch (e) {
+            throw new Error(`Error funding PKP: ${e}`);
+          }
+        }
 
         this.outputs.set(FN.mintPKP, {
           tokenId: {
@@ -343,9 +352,13 @@ export class Bulkie {
           },
           publicKey: hexPrefixedPublicKey,
           ethAddress: res.pkp.ethAddress,
-          txHash: res.tx.hash,
-          explorer: hashOnExplorer
+          tx: {
+            hash: res.tx.hash,
+            explorer: hashOnExplorer
+          },
         });
+
+        return this;
       },
       [`END OF THE ROAD. You need to fund your PKP to use it.`]
     )
