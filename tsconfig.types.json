@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./dist/types",
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "bulkie.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

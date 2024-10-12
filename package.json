@@ -1,14 +1,24 @@
 {
   "name": "bulkie.js",
   "version": "0.0.2",
+  "main": "./dist/cjs/bulkie.js",
+  "module": "./dist/esm/bulkie.js",
+  "types": "./dist/types/bulkie.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/bulkie.js",
+      "import": "./dist/esm/bulkie.js"
+    }
+  },
   "license": "MIT",
   "scripts": {
     "dev": "bun run dev.ts",
-    "build": "bun build bulkie.ts --outdir ./dist --minify",
+    "build": "npm run build:cjs && npm run build:esm && npm run build:types",
+    "build:cjs": "tsc --project tsconfig.cjs.json",
+    "build:esm": "tsc --project tsconfig.esm.json",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist/types --project tsconfig.types.json",
     "prepublishOnly": "bun run build"
   },
-  "main": "./dist/bulkie.js",
-  "types": "./dist/bulkie.d.ts",
   "files": [
     "dist"
   ],
@@ -21,5 +31,8 @@
   },
   "engines": {
     "bun": ">=0.6.0"
+  },
+  "devDependencies": {
+    "@types/jszip": "^3.4.0"
   }
 }
