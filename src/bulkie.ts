@@ -2,8 +2,8 @@ import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { LIT_NETWORKS_KEYS } from '@lit-protocol/types';
 import { ethers, Signer, Wallet } from 'ethers';
-import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK } from '@lit-protocol/constants';
-import { BulkieSupportedFunctions, FN, FunctionReturnTypes } from './types';
+import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, AuthMethodScope } from '@lit-protocol/constants';
+import { BulkieSupportedFunctions, FN, FunctionReturnTypes, STEP, STEP_VALUES, UNAVAILABLE_STEP } from './types';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -74,7 +74,7 @@ export class Bulkie {
   }
 
   getOutput<T extends BulkieSupportedFunctions>(fnName: T): FunctionReturnTypes[T] | undefined {
-    return;
+    return this.outputs.get(fnName) as FunctionReturnTypes[T] | undefined;
   }
 
   getAllOutputs() {
@@ -151,7 +151,7 @@ export class Bulkie {
     opName: string,
     fnName: BulkieSupportedFunctions,
     action: () => Promise<T>,
-    nextSteps: string[]
+    nextSteps: STEP_VALUES,
   ): Promise<T> {
     const startTime = Date.now();
 
@@ -179,6 +179,9 @@ export class Bulkie {
     }
   }
 
+  /**
+   * a function to check if all the required actions are ran before running the current action. eg. mintPKP requires connectToLitContracts to be ran first.
+   */
   private _checkRequirements(fnName: BulkieSupportedFunctions) {
 
     const require = {
@@ -225,8 +228,10 @@ export class Bulkie {
         require.litContracts();
         require.signer();
         break;
+      case FN.grantAuthMethodToUsePKP:
+        require.litContracts();
+        require.signer();
       default:
-
     }
   }
 
@@ -251,7 +256,9 @@ export class Bulkie {
 
         return this;
       },
-      [`${FN.connectToLitContracts} (to connect to Lit Contracts)`]
+      [
+        STEP['connectToLitContracts']
+      ]
     );
   }
 
@@ -283,13 +290,27 @@ export class Bulkie {
         return this;
       },
       [
-        `${FN.mintPKP} (to mint a PKP - Tip: Pass in { selfFund: true } to fund the PKP).`,
-        `${FN.getPkps} (to get all PKPs)`
+        STEP['mintPKP'],
+        STEP['getPkps']
       ]
     )
   }
 
   async mintPKP(params: { selfFund?: boolean, amountInEth?: string }): Promise<this> {
+
+    let _nextSteps: STEP_VALUES = [];
+
+    if (params.selfFund) {
+      _nextSteps = [
+        STEP['grantAuthMethodToUsePKP'],
+        UNAVAILABLE_STEP['grantIPFSCID'],
+      ];
+    } else {
+      _nextSteps = [
+        UNAVAILABLE_STEP['mint-pkp-no-immediate-steps']
+      ];
+    }
+
     return this._run(
       'Mint PKP',
       FN.mintPKP,
@@ -360,7 +381,69 @@ export class Bulkie {
 
         return this;
       },
-      [`END OF THE ROAD. You need to fund your PKP to use it.`]
+      _nextSteps
     )
   }
+
+  async grantAuthMethodToUsePKP({
+    pkpTokenId,
+    authMethodId,
+    authMethodType,
+    scopes,
+  }: {
+    pkpTokenId: `0x${string}`;
+
+    /**
+     * authMethodId is a string that represents the user id of the user that you want to grant access to. This is usually done in the backend of your application. eg. 'app-id-xxx:user-id-yyy'
+     */
+    authMethodId: `${string}:${string}` | string;
+
+    /**
+     * Recommend to use a very high number for custom auth method types.
+     */
+    authMethodType: number;
+    scopes: ('no_permission' | 'sign_anything' | 'eip_191_personal_sign')[]
+  }) {
+
+    // no_permission = 0
+    // sign_anything = 1
+    // eip_191_personal_sign = 2
+    const _scopes = scopes.map(scope => {
+      return scope === 'no_permission' ? 0 : scope === 'sign_anything' ? 1 : 2;
+    });
+
+    return this._run(
+      'Grant Auth Method',
+      FN.grantAuthMethodToUsePKP,
+      async () => {
+
+        this._debug(`authMethodId: ${authMethodId}`);
+        this._debug(`authMethodType: ${authMethodType}`);
+        this._debug(`scopes: ${scopes} | ${_scopes}`);
+        this._debug(`pkpTokenId: ${pkpTokenId}`);
+
+        const receipt = await this.litContracts.addPermittedAuthMethod({
+          pkpTokenId: pkpTokenId,
+          authMethodId: authMethodId,
+          authMethodType: authMethodType,
+          authMethodScopes: _scopes,
+        });
+
+        const explorerUrl = METAMASK_CHAIN_INFO_BY_NETWORK[this.network].blockExplorerUrls[0]
+        const hashOnExplorer = `${explorerUrl}tx/${receipt.transactionHash}`;
+
+        this._debug(`Transaction hash: ${receipt.transactionHash}`);
+        this._debug(`Explorer:         ${hashOnExplorer}`);
+
+        this.outputs.set(FN.grantAuthMethodToUsePKP, {
+          tx: {
+            hash: receipt.transactionHash,
+            explorer: hashOnExplorer
+          }
+        });
+      },
+      []
+    )
+  }
+
 }

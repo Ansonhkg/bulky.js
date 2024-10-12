@@ -19,7 +19,13 @@ import { FN } from "./src/types";
 
   // freshly minted pkp from output
   const mintedPKP = alice.getOutput(FN.mintPKP);
-  console.log("mintedPKP:", mintedPKP);
+
+  await alice.grantAuthMethodToUsePKP({
+    pkpTokenId: mintedPKP?.tokenId.hex!,
+    authMethodId: 'app-id-xxx:user-id-yyy',
+    authMethodType: 918232,
+    scopes: ['sign_anything']
+  });
 
 
   // this require longer loading time, because it needs to fetch all pkps
