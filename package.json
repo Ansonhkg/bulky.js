@@ -27,7 +27,8 @@
     "@lit-protocol/contracts-sdk": "^6.9.0",
     "@lit-protocol/lit-node-client": "^6.9.0",
     "@lit-protocol/types": "^6.9.0",
-    "ethers": "5.7.2"
+    "ethers": "5.7.2",
+    "typestub-ipfs-only-hash": "^4.0.0"
   },
   "engines": {
     "bun": ">=0.6.0"

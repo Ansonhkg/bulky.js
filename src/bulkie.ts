@@ -1,9 +1,17 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { LIT_NETWORKS_KEYS } from '@lit-protocol/types';
-import { ethers, Signer, Wallet } from 'ethers';
+import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, AuthMethodScope } from '@lit-protocol/constants';
-import { BulkieSupportedFunctions, FN, FunctionReturnTypes, STEP, STEP_VALUES, UNAVAILABLE_STEP } from './types';
+import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes } from './types';
+import {
+  LitAbility,
+  LitActionResource,
+  LitPKPResource,
+  LitAccessControlConditionResource,
+  LitRLIResource
+} from '@lit-protocol/auth-helpers';
+import Hash from "typestub-ipfs-only-hash";
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -62,17 +70,6 @@ export class Bulkie {
   /**
    * ========== Getters ==========
    */
-  getLitNodeClient() {
-    this._checkRequirements('getLitNodeClient');
-
-    return this.litNodeClient;
-  }
-
-  getLitContracts() {
-    this._checkRequirements('getLitContracts');
-    return this.litContracts;
-  }
-
   getOutput<T extends BulkieSupportedFunctions>(fnName: T): FunctionReturnTypes[T] | undefined {
     return this.outputs.get(fnName) as FunctionReturnTypes[T] | undefined;
   }
@@ -175,7 +172,7 @@ export class Bulkie {
 
       return result;
     } catch (e) {
-      throw new Error(`Error in ${opName}: ${e}`);
+      throw new Error(`Error in ${opName}: ${JSON.stringify(e)}`);
     }
   }
 
@@ -214,12 +211,6 @@ export class Bulkie {
       case FN.connectToLitContracts:
         require.network();
         break;
-      case FN.getLitNodeClient:
-        require.litNodeClient();
-        break
-      case FN.getLitContracts:
-        require.litContracts();
-        break
       case FN.mintPKP:
         require.litContracts();
         require.signer();
@@ -231,6 +222,8 @@ export class Bulkie {
       case FN.grantAuthMethodToUsePKP:
         require.litContracts();
         require.signer();
+      case FN.getLoginToken:
+        require.litNodeClient();
       default:
     }
   }
@@ -303,7 +296,7 @@ export class Bulkie {
     if (params.selfFund) {
       _nextSteps = [
         STEP['grantAuthMethodToUsePKP'],
-        UNAVAILABLE_STEP['grantIPFSCID'],
+        STEP['grantIPFSCIDtoUsePKP']
       ];
     } else {
       _nextSteps = [
@@ -323,7 +316,7 @@ export class Bulkie {
 
         const explorerUrl = METAMASK_CHAIN_INFO_BY_NETWORK[this.network].blockExplorerUrls[0]
         const hashOnExplorer = `${explorerUrl}tx/${res.tx.hash}`;
-        const hexPrefixedPublicKey = `0x${res.pkp.publicKey}`;
+        const hexPrefixedPublicKey: HexAddress = `0x${res.pkp.publicKey}`;
         const decimalTokenId = ethers.BigNumber.from(res.pkp.tokenId).toString();
 
         this._debug(`tokenId:    ${decimalTokenId}`);
@@ -385,13 +378,16 @@ export class Bulkie {
     )
   }
 
+  /**
+   * This function is usually called by the dApp owner.
+   */
   async grantAuthMethodToUsePKP({
     pkpTokenId,
     authMethodId,
     authMethodType,
     scopes,
   }: {
-    pkpTokenId: `0x${string}`;
+    pkpTokenId: HexAddress;
 
     /**
      * authMethodId is a string that represents the user id of the user that you want to grant access to. This is usually done in the backend of your application. eg. 'app-id-xxx:user-id-yyy'
@@ -402,7 +398,7 @@ export class Bulkie {
      * Recommend to use a very high number for custom auth method types.
      */
     authMethodType: number;
-    scopes: ('no_permission' | 'sign_anything' | 'eip_191_personal_sign')[]
+    scopes: AuthMethodScopes
   }) {
 
     // no_permission = 0
@@ -442,8 +438,193 @@ export class Bulkie {
           }
         });
       },
-      []
+      [
+        STEP['grantIPFSCIDtoUsePKP']
+      ]
     )
   }
 
+  async grantIPFSCIDtoUsePKP(params: {
+    pkpTokenId: HexAddress,
+    ipfsCid: IPFSCIDv0,
+    scopes: AuthMethodScopes
+  }) {
+
+    // no_permission = 0
+    // sign_anything = 1
+    // eip_191_personal_sign = 2
+    const _scopes = params.scopes.map(scope => {
+      return scope === 'no_permission' ? 0 : scope === 'sign_anything' ? 1 : 2;
+    });
+
+    return this._run(
+      'Grant IPFS CID',
+      'grantIPFSCIDtoUsePKP',
+      async () => {
+
+        this._debug(`pkpTokenId: ${params.pkpTokenId}`);
+        this._debug(`ipfsCid: ${params.ipfsCid}`);
+        this._debug(`scopes: ${params.scopes} | ${_scopes}`);
+
+        const receipt = await this.litContracts.addPermittedAction({
+          pkpTokenId: params.pkpTokenId,
+          ipfsId: params.ipfsCid,
+          authMethodScopes: _scopes,
+        });
+
+        const explorerUrl = METAMASK_CHAIN_INFO_BY_NETWORK[this.network].blockExplorerUrls[0]
+        const hashOnExplorer = `${explorerUrl}tx/${receipt.transactionHash}`;
+
+        this._debug(`Transaction hash: ${receipt.transactionHash}`);
+        this._debug(`Explorer:         ${hashOnExplorer}`);
+
+        this.outputs.set(FN.grantIPFSCIDtoUsePKP, {
+          tx: {
+            hash: receipt.transactionHash,
+            explorer: hashOnExplorer
+          }
+        });
+      },
+      [
+        STEP['getLoginToken']
+      ]
+    )
+  }
+
+  async getLoginToken(params: {
+    pkpPublicKey: HexAddress;
+    type: 'custom_auth' | 'native_auth' | 'eoa',
+    resources: {
+      type:
+      'pkp-signing' |
+      'lit-action-execution' |
+      'rate-limit-increase-auth' |
+      'access-control-condition-decryption' |
+      'access-control-condition-signing',
+      request: string | '*'
+    }[],
+  } & (
+      (| {
+        type: 'native_auth' | 'custom_auth';
+      } & ({
+        jsParams: any;
+        code: string;
+
+        /**
+         * Make sure that this ipfsCid is pinned on the IPFS node so we can fetch it later.
+         */
+        ipfsCid?: IPFSCIDv0
+      }) | ({
+        jsParams: any;
+        code?: string;
+
+        /**
+         * Make sure that this ipfsCid is pinned on the IPFS node so we can fetch it later.
+         */
+        ipfsCid: IPFSCIDv0
+      }))
+      | { type: 'eoa' }
+    )) {
+
+
+    if (params.type === 'eoa' || params.type === 'native_auth') {
+      throw new Error('Native auth and EOA are not supported yet');
+    }
+
+    if (params.type === 'custom_auth') {
+
+      if (!params.code && !params.ipfsCid) {
+        throw new Error('Either code or ipfsCid must be provided');
+      }
+      if (params.code && params.ipfsCid) {
+        throw new Error('Only one of code or ipfsCid should be provided, not both');
+      }
+
+      if (!params.jsParams) {
+        throw new Error('jsParams is required');
+      }
+
+    }
+
+    if (!params.pkpPublicKey) {
+      throw new Error('pkpPublicKey is required');
+    }
+
+    if (!params.resources.length || params.resources.length === 0) {
+      throw new Error('resources is required');
+    }
+
+    const _pkpPublicKey: string = params.pkpPublicKey.startsWith('0x') ? params.pkpPublicKey.slice(2) : params.pkpPublicKey;
+
+    const requestAbilityRequests = params.resources.map(resource => {
+      switch (resource.type) {
+        case 'access-control-condition-signing':
+          return {
+            resource: new LitAccessControlConditionResource(resource.request),
+            ability: LitAbility.AccessControlConditionSigning,
+          }
+        case 'access-control-condition-decryption':
+          return {
+            resource: new LitAccessControlConditionResource(resource.request),
+            ability: LitAbility.AccessControlConditionDecryption,
+          }
+        case 'lit-action-execution':
+          return {
+            resource: new LitActionResource(resource.request),
+            ability: LitAbility.LitActionExecution,
+          }
+        case 'rate-limit-increase-auth'
+          : return {
+            resource: new LitRLIResource(resource.request),
+            ability: LitAbility.RateLimitIncreaseAuth,
+          }
+        case 'pkp-signing':
+          return {
+            resource: new LitPKPResource(resource.request),
+            ability: LitAbility.PKPSigning,
+          }
+        default:
+          throw new Error(`Resource type ${resource.type} is not supported`);
+      }
+    });
+
+    this._debug(`pkpPublicKey: ${params.pkpPublicKey}`);
+    this._debug(`type: ${params.type}`);
+    this._debug(`resources: ${JSON.stringify(params.resources)}`);
+
+    return this._run(
+      'Get Login Token',
+      FN.getLoginToken,
+      async () => {
+
+        if (params.type === 'custom_auth') {
+
+          const sessionSigs = await this.litNodeClient.getLitActionSessionSigs({
+            pkpPublicKey: _pkpPublicKey,
+            resourceAbilityRequests: requestAbilityRequests,
+            ...(params.code && !params.ipfsCid
+              ? { litActionCode: Buffer.from(params.code).toString('base64') }
+              : { litActionIpfsId: params.ipfsCid! }),
+            jsParams: params.jsParams,
+          });
+
+          this.outputs.set(FN.getLoginToken, sessionSigs);
+
+          return this;
+        } else {
+          throw new Error('Type not supported yet');
+        }
+      },
+      [
+        STEP['executeJs'],
+        // STEP['pkpSign']
+      ]);
+  }
+
+}
+
+export namespace BulkieUtils {
+  export const strToIPFSHash = async (str: string): Promise<IPFSCIDv0> => {
+    return await Hash.of(Buffer.from(str)) as IPFSCIDv0;
+  };
 }
