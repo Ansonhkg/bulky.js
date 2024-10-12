@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-import { Bulkie, FN } from "./bulkie";
+import { Bulkie } from "./src/bulkie";
+import { FN } from "./src/types";
 
 (async () => {
   // create a signer
@@ -10,16 +11,16 @@ import { Bulkie, FN } from "./bulkie";
     debug: true,
     network: 'datil',
     signer: signer,
-    // TODO: Add more options here
-    // customRpc (This should be passed to LitNodeClient and LitContracts)
   });
 
   await alice.connectToLitNodeClient();
   await alice.connectToLitContracts();
-  // await alice.mintPKP();
+  await alice.mintPKP({ selfFund: true, amountInEth: "0.0001" });
 
-  // freshly minted pkp
-  // const pkp = alice.getOutput(FN.mintPKP);
+  // freshly minted pkp from output
+  const mintedPKP = alice.getOutput(FN.mintPKP);
+  console.log("mintedPKP:", mintedPKP);
+
 
   // this require longer loading time, because it needs to fetch all pkps
   // const pkps = await alice.getPkps();
