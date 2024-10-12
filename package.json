@@ -3,13 +3,23 @@
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
-    "dev": "bun run dev.ts"
+    "dev": "bun run dev.ts",
+    "build": "bun build bulkie.ts --outdir ./dist --minify",
+    "prepublishOnly": "bun run build"
   },
+  "main": "./dist/bulkie.js",
+  "types": "./dist/bulkie.d.ts",
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@lit-protocol/constants": "^6.9.0",
     "@lit-protocol/contracts-sdk": "^6.9.0",
     "@lit-protocol/lit-node-client": "^6.9.0",
     "@lit-protocol/types": "^6.9.0",
     "ethers": "5.7.2"
+  },
+  "engines": {
+    "bun": ">=0.6.0"
   }
 }
