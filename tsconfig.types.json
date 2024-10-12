@@ -13,9 +13,6 @@
     "skipLibCheck": true
   },
   "include": [
-    "bulkie.ts"
-  ],
-  "exclude": [
-    "node_modules"
+    "./src/bulkie.ts"
   ]
 }
