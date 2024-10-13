@@ -1,6 +1,6 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { LIT_NETWORKS_KEYS } from '@lit-protocol/types';
+import { LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, AuthMethodScope } from '@lit-protocol/constants';
 import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes } from './types';
@@ -503,6 +503,7 @@ export class Bulkie {
       'access-control-condition-signing',
       request: string | '*'
     }[],
+    delegationToken?: string;
   } & (
       (| {
         type: 'native_auth' | 'custom_auth';
@@ -606,6 +607,7 @@ export class Bulkie {
               ? { litActionCode: Buffer.from(params.code).toString('base64') }
               : { litActionIpfsId: params.ipfsCid! }),
             jsParams: params.jsParams,
+            capabilityAuthSigs: [],
           });
 
           this.outputs.set(FN.getLoginToken, sessionSigs);
@@ -627,4 +629,28 @@ export namespace BulkieUtils {
   export const strToIPFSHash = async (str: string): Promise<IPFSCIDv0> => {
     return await Hash.of(Buffer.from(str)) as IPFSCIDv0;
   };
+
+  export const parseAuthContext = (sessionSigs: SessionSigsMap) => {
+    return Object.values(sessionSigs).map((v) => {
+      const signedMessage = v.signedMessage;
+      const urnLine = signedMessage.match(/urn:recap:[\w\d]+/)![0];
+
+      const authContext = JSON.parse(atob(urnLine.split(':')[2])).att['lit-resolvedauthcontext://*']['Auth/Auth'][0]['auth_context'];
+
+      const extractedCustomAuthResource = (authContext['customAuthResource']).slice(8, -2);
+      const formattedCustomAuthResource = extractedCustomAuthResource.replace(/\\"/g, '"');
+      let result;
+
+      try {
+        result = JSON.parse(formattedCustomAuthResource);
+      } catch (e) {
+        result = extractedCustomAuthResource
+      }
+
+      return {
+        authContext,
+        formattedCustomAuthResource: result,
+      };
+    })
+  }
 }

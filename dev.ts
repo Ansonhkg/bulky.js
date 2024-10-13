@@ -11,7 +11,7 @@ console.warn = () => { };
   const alice = new Bulkie({
     guides: true,
     debug: true,
-    litDebug: false,
+    litDebug: true,
     network: 'datil',
     signer: signer,
   });
@@ -20,19 +20,38 @@ console.warn = () => { };
   await alice.connectToLitContracts();
   await alice.mintPKP({ selfFund: true, amountInEth: "0.0001" });
 
-  await alice.grantAuthMethodToUsePKP({
-    pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
-    authMethodId: 'app-id-xxx:user-id-yyy',
-    authMethodType: 918232,
-    scopes: ['sign_anything']
-  });
+  // await alice.grantAuthMethodToUsePKP({
+  //   pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
+  //   authMethodId: 'app-id-xxx:user-id-yyy',
+  //   authMethodType: 918232,
+  //   scopes: ['sign_anything']
+  // });
 
   const litActionCode = `(async () => {
+
+    const jsParams = {
+      magicNumber: magicNumber
+    };
+
     const a = 1;
     const b = 2;
     console.log("Lit.Auth:", Lit.Auth);
 
-    LitActions.setResponse({response: "true" });    
+    const res = await Lit.Actions.runOnce(
+      { waitForResponse: true, name: 'bulkie-testing' },
+      async () => {
+        return JSON.stringify({ MO: 'FO' });
+      }
+    );
+
+    if(a + b === jsParams.magicNumber){
+       Lit.Actions.setResponse({
+          response: JSON.stringify(\`(true, $\{res}\)\`),
+        });
+    }else{
+      LitActions.setResponse({ response: "false" });  
+    }
+
   })()`;
 
   const ipfsCid = await BulkieUtils.strToIPFSHash(litActionCode);
@@ -53,23 +72,30 @@ console.warn = () => { };
     code: litActionCode,
     // ipfsCid: ipfsCid,
     jsParams: {
-      pkpPublicKey: alice.getOutput(FN.mintPKP)?.publicKey as `0x${string}`,
+      // pkpPublicKey: alice.getOutput(FN.mintPKP)?.publicKey as `0x${string}`,
+      magicNumber: 3,
     },
-  })
+  });
+
 
   const loginToken = alice.getOutput(FN.getLoginToken);
-  const litNodeClient = alice.getOutput(FN.connectToLitNodeClient);
+  console.log("loginToken:", loginToken);
 
-  console.log("litNodeClient:", litNodeClient);
+  const parsedAuthContext = BulkieUtils.parseAuthContext(loginToken!);
+  console.log("parsedAuthContext:", parsedAuthContext);
 
-  const res = await litNodeClient?.executeJs({
-    sessionSigs: loginToken!,
-    code: `(async () => {
-      console.log("Lit.Auth:", Lit.Auth);
-    })();`,
-  })
+  // const litNodeClient = alice.getOutput(FN.connectToLitNodeClient);
 
-  console.log("res:", res);
+  // console.log("litNodeClient:", litNodeClient);
+
+  // const res = await litNodeClient?.executeJs({
+  //   sessionSigs: loginToken!,
+  //   code: `(async () => {
+  //     console.log("Lit.Auth:", Lit.Auth);
+  //   })();`,
+  // })
+
+  // console.log("res:", res);
 
   // this require longer loading time, because it needs to fetch all pkps
   // const pkps = await alice.getPkps();
