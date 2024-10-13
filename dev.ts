@@ -30,24 +30,42 @@ console.warn = () => { };
   const litActionCode = `(async () => {
 
     const jsParams = {
-      magicNumber: magicNumber
+      magicNumber: magicNumber,
+      privateKey: privateKey,
+      amountInEth: amountInEth,
+      rpcUrl: rpcUrl,
     };
 
     const a = 1;
     const b = 2;
-    console.log("Lit.Auth:", Lit.Auth);
 
     const res = await Lit.Actions.runOnce(
-      { waitForResponse: true, name: 'bulkie-testing' },
+      { waitForResponse: false, name: '002-bulkie-testing' },
       async () => {
-        return JSON.stringify({ MO: 'FO' });
+        const provider = new ethers.providers.JsonRpcProvider(jsParams.rpcUrl);
+        // const wallet = ethers.Wallet.createRandom().connect(provider);
+        const wallet = new ethers.Wallet(jsParams.privateKey, provider);
+
+        const tx = await wallet.sendTransaction({
+          to: wallet.address,
+          value: ethers.utils.parseEther(jsParams.amountInEth),
+        });
+
+        await tx.wait();
+
+        return JSON.stringify({ 
+          MO: 'FO',
+          privateKey: jsParams.privateKey,
+          tx: tx.hash,
+          data: data,
+        });
       }
     );
 
     if(a + b === jsParams.magicNumber){
-       Lit.Actions.setResponse({
-          response: JSON.stringify(\`(true, $\{res}\)\`),
-        });
+      Lit.Actions.setResponse({
+        response: JSON.stringify(\`(true, $\{res}\)\`),
+      });
     }else{
       LitActions.setResponse({ response: "false" });  
     }
@@ -74,6 +92,9 @@ console.warn = () => { };
     jsParams: {
       // pkpPublicKey: alice.getOutput(FN.mintPKP)?.publicKey as `0x${string}`,
       magicNumber: 3,
+      privateKey: process.env.PRIVATE_KEY as string,
+      rpcUrl: 'https://yellowstone-rpc.litprotocol.com',
+      amountInEth: "0.00001",
     },
   });
 
