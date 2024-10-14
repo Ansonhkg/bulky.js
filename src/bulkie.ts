@@ -226,7 +226,7 @@ export class Bulkie {
       case FN.grantAuthMethodToUsePKP:
         require.litContracts();
         require.signer();
-      case FN.getLoginToken:
+      case FN.createAccessToken:
         require.litNodeClient();
       default:
     }
@@ -415,7 +415,9 @@ export class Bulkie {
         })
         this._debug(`Capacity Token ID: ${capacityTokenIdStr}`);
 
-        this.outputs.set(FN.mintCreditsToken, capacityTokenIdStr)
+        this.outputs.set(FN.mintCreditsToken, capacityTokenIdStr);
+
+        return this;
       },
       [
         STEP['createCreditsDelegationToken'],
@@ -468,127 +470,15 @@ export class Bulkie {
         }
 
         this.outputs.set('createCreditsDelegationToken', capacityDelegationAuthSig);
+
+        return this;
       },
       [
-        STEP['getLoginToken']
+        STEP['createAccessToken']
       ]
     )
   }
-
-  /**
-   * This function is usually called by the dApp owner.
-   */
-  async grantAuthMethodToUsePKP({
-    pkpTokenId,
-    authMethodId,
-    authMethodType,
-    scopes,
-  }: {
-    pkpTokenId: HexAddress;
-
-    /**
-     * authMethodId is a string that represents the user id of the user that you want to grant access to. This is usually done in the backend of your application. eg. 'app-id-xxx:user-id-yyy'
-     */
-    authMethodId: `${string}:${string}` | string;
-
-    /**
-     * Recommend to use a very high number for custom auth method types.
-     */
-    authMethodType: number;
-    scopes: AuthMethodScopes
-  }) {
-
-    // no_permission = 0
-    // sign_anything = 1
-    // eip_191_personal_sign = 2
-    const _scopes = scopes.map(scope => {
-      return scope === 'no_permission' ? 0 : scope === 'sign_anything' ? 1 : 2;
-    });
-
-    return this._run(
-      'Grant Auth Method',
-      FN.grantAuthMethodToUsePKP,
-      async () => {
-
-        this._debug(`authMethodId: ${authMethodId}`);
-        this._debug(`authMethodType: ${authMethodType}`);
-        this._debug(`scopes: ${scopes} | ${_scopes}`);
-        this._debug(`pkpTokenId: ${pkpTokenId}`);
-
-        const receipt = await this.litContracts.addPermittedAuthMethod({
-          pkpTokenId: pkpTokenId,
-          authMethodId: authMethodId,
-          authMethodType: authMethodType,
-          authMethodScopes: _scopes,
-        });
-
-        const explorerUrl = METAMASK_CHAIN_INFO_BY_NETWORK[this.network].blockExplorerUrls[0]
-        const hashOnExplorer = `${explorerUrl}tx/${receipt.transactionHash}`;
-
-        this._debug(`Transaction hash: ${receipt.transactionHash}`);
-        this._debug(`Explorer:         ${hashOnExplorer}`);
-
-        this.outputs.set(FN.grantAuthMethodToUsePKP, {
-          tx: {
-            hash: receipt.transactionHash,
-            explorer: hashOnExplorer
-          }
-        });
-      },
-      [
-        STEP['grantIPFSCIDtoUsePKP']
-      ]
-    )
-  }
-
-  async grantIPFSCIDtoUsePKP(params: {
-    pkpTokenId: HexAddress,
-    ipfsCid: IPFSCIDv0,
-    scopes: AuthMethodScopes
-  }) {
-
-    // no_permission = 0
-    // sign_anything = 1
-    // eip_191_personal_sign = 2
-    const _scopes = params.scopes.map(scope => {
-      return scope === 'no_permission' ? 0 : scope === 'sign_anything' ? 1 : 2;
-    });
-
-    return this._run(
-      'Grant IPFS CID',
-      'grantIPFSCIDtoUsePKP',
-      async () => {
-
-        this._debug(`pkpTokenId: ${params.pkpTokenId}`);
-        this._debug(`ipfsCid: ${params.ipfsCid}`);
-        this._debug(`scopes: ${params.scopes} | ${_scopes}`);
-
-        const receipt = await this.litContracts.addPermittedAction({
-          pkpTokenId: params.pkpTokenId,
-          ipfsId: params.ipfsCid,
-          authMethodScopes: _scopes,
-        });
-
-        const explorerUrl = METAMASK_CHAIN_INFO_BY_NETWORK[this.network].blockExplorerUrls[0]
-        const hashOnExplorer = `${explorerUrl}tx/${receipt.transactionHash}`;
-
-        this._debug(`Transaction hash: ${receipt.transactionHash}`);
-        this._debug(`Explorer:         ${hashOnExplorer}`);
-
-        this.outputs.set(FN.grantIPFSCIDtoUsePKP, {
-          tx: {
-            hash: receipt.transactionHash,
-            explorer: hashOnExplorer
-          }
-        });
-      },
-      [
-        STEP['getLoginToken']
-      ]
-    )
-  }
-
-  async getLoginToken(params: {
+  async createAccessToken(params: {
     pkpPublicKey: HexAddress;
     type: 'custom_auth' | 'native_auth' | 'eoa',
     resources: {
@@ -606,6 +496,11 @@ export class Bulkie {
         type: 'native_auth' | 'custom_auth';
       } & ({
         jsParams: any;
+        permissions?: {
+          grantIPFSCIDtoUsePKP?: {
+            scopes: AuthMethodScopes;
+          }
+        },
         code: string;
 
         /**
@@ -614,6 +509,12 @@ export class Bulkie {
         ipfsCid?: IPFSCIDv0
       }) | ({
         jsParams: any;
+        permissions?: {
+          grantIPFSCIDtoUsePKP?: {
+            scopes: AuthMethodScopes;
+          }
+        },
+
         code?: string;
 
         /**
@@ -691,11 +592,35 @@ export class Bulkie {
     this._debug(`resources: ${JSON.stringify(params.resources)}`);
 
     return this._run(
-      'Get Login Token',
-      FN.getLoginToken,
+      'Create Access Token',
+      FN.createAccessToken,
       async () => {
 
         if (params.type === 'custom_auth') {
+
+          if (params?.permissions?.grantIPFSCIDtoUsePKP) {
+            this._debug(`Enabling IPFS CID permissions`);
+            const _ipfsCid = params?.ipfsCid ? params.ipfsCid : await BulkieUtils.strToIPFSHash(params.code!);
+
+            const _tokenIdHex = BulkieUtils.pubKeyToTokenId(params.pkpPublicKey);
+
+            await this.grantIPFSCIDtoUsePKP({
+              pkpTokenId: _tokenIdHex,
+              ipfsCid: _ipfsCid,
+              scopes: params.permissions.grantIPFSCIDtoUsePKP.scopes,
+            })
+          }
+
+          if (!params.creditsDelegationToken) {
+            throw new Error('creditsDelegationToken is required');
+          }
+
+          if (!params.code && !params.ipfsCid) {
+            throw new Error('Either code or ipfsCid must be provided');
+          }
+
+
+
           const sessionSigs = await this.litNodeClient.getLitActionSessionSigs({
             pkpPublicKey: _pkpPublicKey,
             resourceAbilityRequests: requestAbilityRequests,
@@ -706,7 +631,7 @@ export class Bulkie {
             ...(params.creditsDelegationToken && { capabilityAuthSigs: [params.creditsDelegationToken] }),
           });
 
-          this.outputs.set(FN.getLoginToken, sessionSigs);
+          this.outputs.set(FN.createAccessToken, sessionSigs);
 
           return this;
         } else {
@@ -719,4 +644,128 @@ export class Bulkie {
       ]);
   }
 
+  /**
+   * This function is usually called by the dApp owner.
+   */
+  async grantAuthMethodToUsePKP({
+    pkpTokenId,
+    authMethodId,
+    authMethodType,
+    scopes,
+  }: {
+    pkpTokenId: HexAddress;
+
+    /**
+     * authMethodId is a string that represents the user id of the user that you want to grant access to. This is usually done in the backend of your application. eg. 'app-id-xxx:user-id-yyy'
+     */
+    authMethodId: `${string}:${string}` | string;
+
+    /**
+     * Recommend to use a very high number for custom auth method types.
+     */
+    authMethodType: number;
+    scopes: AuthMethodScopes
+  }) {
+
+    // no_permission = 0
+    // sign_anything = 1
+    // eip_191_personal_sign = 2
+    const _scopes = scopes.map(scope => {
+      return scope === 'no_permission' ? 0 : scope === 'sign_anything' ? 1 : 2;
+    });
+
+    return this._run(
+      'Grant Auth Method',
+      FN.grantAuthMethodToUsePKP,
+      async () => {
+
+        this._debug(`authMethodId: ${authMethodId}`);
+        this._debug(`authMethodType: ${authMethodType}`);
+        this._debug(`scopes: ${scopes} | ${_scopes}`);
+        this._debug(`pkpTokenId: ${pkpTokenId}`);
+
+        const receipt = await this.litContracts.addPermittedAuthMethod({
+          pkpTokenId: pkpTokenId,
+          authMethodId: authMethodId,
+          authMethodType: authMethodType,
+          authMethodScopes: _scopes,
+        });
+
+        const explorerUrl = METAMASK_CHAIN_INFO_BY_NETWORK[this.network].blockExplorerUrls[0]
+        const hashOnExplorer = `${explorerUrl}tx/${receipt.transactionHash}`;
+
+        this._debug(`Transaction hash: ${receipt.transactionHash}`);
+        this._debug(`Explorer:         ${hashOnExplorer}`);
+
+        this.outputs.set(FN.grantAuthMethodToUsePKP, {
+          tx: {
+            hash: receipt.transactionHash,
+            explorer: hashOnExplorer
+          }
+        });
+
+        return this;
+      },
+      [
+        STEP['grantIPFSCIDtoUsePKP']
+      ]
+    )
+  }
+
+  async grantIPFSCIDtoUsePKP(params: {
+    pkpTokenId: HexAddress,
+    ipfsCid: IPFSCIDv0,
+    scopes: AuthMethodScopes
+  }) {
+
+    // no_permission = 0
+    // sign_anything = 1
+    // eip_191_personal_sign = 2
+    const _scopes = params.scopes.map(scope => {
+      return scope === 'no_permission' ? 0 : scope === 'sign_anything' ? 1 : 2;
+    });
+
+    return this._run(
+      'Grant IPFS CID',
+      'grantIPFSCIDtoUsePKP',
+      async () => {
+
+        this._debug(`pkpTokenId: ${params.pkpTokenId}`);
+        this._debug(`ipfsCid: ${params.ipfsCid}`);
+        this._debug(`scopes: ${params.scopes} | ${_scopes}`);
+
+        const receipt = await this.litContracts.addPermittedAction({
+          pkpTokenId: params.pkpTokenId,
+          ipfsId: params.ipfsCid,
+          authMethodScopes: _scopes,
+        });
+
+        const explorerUrl = METAMASK_CHAIN_INFO_BY_NETWORK[this.network].blockExplorerUrls[0]
+        const hashOnExplorer = `${explorerUrl}tx/${receipt.transactionHash}`;
+
+        this._debug(`Transaction hash: ${receipt.transactionHash}`);
+        this._debug(`Explorer:         ${hashOnExplorer}`);
+
+        this.outputs.set(FN.grantIPFSCIDtoUsePKP, {
+          tx: {
+            hash: receipt.transactionHash,
+            explorer: hashOnExplorer
+          }
+        });
+
+        return this;
+      },
+      [
+        STEP['createAccessToken']
+      ]
+    )
+  }
+
+
+  async runJs(params: {
+    accessTokens: string,
+  }
+  ) {
+
+  }
 }

@@ -17,25 +17,22 @@ console.warn = () => { };
     signer: signer,
   });
 
-  await alice.connectToLitNodeClient();
-  await alice.connectToLitContracts();
-  await alice.mintPKP({ selfFund: true, amountInEth: "0.0001" });
-  await alice.mintCreditsToken({
-    requestsPerKilosecond: 200,
-    daysUntilUTCMidnightExpiration: 2
-  });
-
-  await alice.createCreditsDelegationToken({
-    creditsTokenId: alice.getOutput(FN.mintCreditsToken)!,
-    // delegatees: [],
-  });
-
-  await alice.grantAuthMethodToUsePKP({
-    pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
-    authMethodId: 'app-id-xxx:user-id-yyy',
-    authMethodType: 918232,
-    scopes: ['sign_anything']
-  });
+  await alice.connectToLitNodeClient()
+    .then((client) => client.connectToLitContracts())
+    .then((client) => client.mintPKP({ selfFund: true, amountInEth: "0.0001" }))
+    .then((client) => client.mintCreditsToken({
+      requestsPerKilosecond: 200,
+      daysUntilUTCMidnightExpiration: 2
+    }))
+    .then((client) => client.createCreditsDelegationToken({
+      creditsTokenId: client.getOutput(FN.mintCreditsToken)!
+    }))
+    .then((client) => client.grantAuthMethodToUsePKP({
+      pkpTokenId: client.getOutput(FN.mintPKP)?.tokenId.hex!,
+      authMethodId: 'app-id-xxx:user-id-yyy',
+      authMethodType: 918232,
+      scopes: ['sign_anything']
+    }));
 
   const litActionCode = `(async () => {
     const jsParams = {
@@ -81,21 +78,28 @@ console.warn = () => { };
 
   })()`;
 
-  const ipfsCid = await BulkieUtils.strToIPFSHash(litActionCode);
+  // const ipfsCid = await BulkieUtils.strToIPFSHash(litActionCode);
 
-  await alice.grantIPFSCIDtoUsePKP({
-    pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
-    ipfsCid: ipfsCid,
-    scopes: ['sign_anything']
-  });
+  // await alice.grantIPFSCIDtoUsePKP({
+  //   pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
+  //   ipfsCid: ipfsCid,
+  //   scopes: ['sign_anything']
+  // });
 
-  await alice.getLoginToken({
-    pkpPublicKey: alice.getOutput(FN.mintPKP)?.publicKey as `0x${string}`,
+  // Maybe we should add a `permissions` field for access token?
+  await alice.createAccessToken({
     type: 'custom_auth',
+    pkpPublicKey: alice.getOutput(FN.mintPKP)?.publicKey as `0x${string}`,
+    creditsDelegationToken: alice.getOutput(FN.createCreditsDelegationToken),
     resources: [
       { type: 'pkp-signing', request: '*' },
       { type: 'lit-action-execution', request: '*' },
     ],
+    permissions: {
+      grantIPFSCIDtoUsePKP: {
+        scopes: ['sign_anything']
+      },
+    },
     code: litActionCode,
     // ipfsCid: ipfsCid,
     jsParams: {
@@ -105,19 +109,22 @@ console.warn = () => { };
       // privateKey: process.env.PRIVATE_KEY as string,
       // amountInEth: "0.00001",
     },
-    creditsDelegationToken: alice.getOutput(FN.createCreditsDelegationToken),
   });
 
-  const loginToken = alice.getOutput(FN.getLoginToken);
-  console.log("loginToken:", loginToken);
+  const accessToken = alice.getOutput(FN.createAccessToken);
 
-  const parsedAuthContext = BulkieUtils.parseAuthContext(loginToken!);
-  console.log("parsedAuthContext:", parsedAuthContext);
+  // base64 encoded access token
+  const base64AccessToken = Buffer.from(JSON.stringify(accessToken)).toString('base64');
+
+  // write to file
+  const fs = require('fs');
+  fs.writeFileSync('access-token.json', JSON.stringify(accessToken, null, 2));
+  fs.writeFileSync('access-token-base64.json', JSON.stringify(base64AccessToken, null, 2));
 
   const litNodeClient = alice.getOutput(FN.connectToLitNodeClient);
 
   const res = await litNodeClient?.executeJs({
-    sessionSigs: loginToken!,
+    sessionSigs: accessToken!,
     code: `(async () => {
       console.log("Testing");
     })();`,

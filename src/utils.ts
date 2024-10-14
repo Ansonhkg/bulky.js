@@ -1,6 +1,7 @@
 import Hash from "typestub-ipfs-only-hash";
 import { IPFSCIDv0 } from "./types";
 import { SessionSigsMap } from "@lit-protocol/types";
+import { ethers } from "ethers";
 
 export namespace BulkieUtils {
   export const strToIPFSHash = async (str: string): Promise<IPFSCIDv0> => {
@@ -39,9 +40,14 @@ export namespace BulkieUtils {
 
       const { result } = parseSignedMessage(signedMessage);
 
-      
       return result;
 
     }).find((v) => v !== 'undefined');
   }
+
+  export const pubKeyToTokenId = (publicKey: string): `0x${string}` => {
+    const bytes = ethers.utils.arrayify(publicKey);
+
+    return `0x${ethers.utils.keccak256(bytes).slice(2)}`
+  };
 }

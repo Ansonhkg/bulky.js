@@ -7,12 +7,13 @@ export const FN = {
   'connectToLitNodeClient': 'connectToLitNodeClient',
   'connectToLitContracts': 'connectToLitContracts',
 
-  // setters
+  // minting
   'mintPKP': 'mintPKP',
   'mintCreditsToken': 'mintCreditsToken',
 
   // creating tokens
   'createCreditsDelegationToken': "createCreditsDelegationToken",
+  'createAccessToken': 'createAccessToken',
 
   // granting PKP permissions to do something
   'grantAuthMethodToUsePKP': 'grantAuthMethodToUsePKP',
@@ -20,7 +21,6 @@ export const FN = {
 
   // getters
   'getPkps': 'getPkps',
-  'getLoginToken': 'getLoginToken',
   'executeJs': 'executeJs'
 } as const;
 
@@ -37,11 +37,11 @@ export const STEP = {
   [FN.grantIPFSCIDtoUsePKP]: `${FN.grantIPFSCIDtoUsePKP} - (to grant an IPFS CID to use the PKP)`,
 
   // creating tokens
+  [FN.createAccessToken]: `${FN.createAccessToken} - (You can use this token to access to Lit Network. Note that you will also need credits to use the Network)`,
   [FN.createCreditsDelegationToken]: `${FN.createCreditsDelegationToken} - (to create a Credits Delegation Token so that your users can use the credits token you minted subject to the addresses you specify)`,
 
   // getters
   [FN.getPkps]: `${FN.getPkps} - (to get all PKPs)`,
-  [FN.getLoginToken]: `${FN.getLoginToken} - (You can use this token to login to Lit Network. Note that you will also need credits to use the Network)`,
 
   // actions
   [FN.executeJs]: `${FN.executeJs} - (to execute a JS code in the Lit Nodes withint a trusted execution environment (TEE) )`
@@ -65,7 +65,6 @@ export type FunctionReturnTypes = {
     tx: TX;
   };
   [FN.mintCreditsToken]: string,
-  [FN.createCreditsDelegationToken]: AuthSig,
   [FN.getPkps]: {
     tokenId: PKPTokenId,
     publicKey: string;
@@ -74,11 +73,14 @@ export type FunctionReturnTypes = {
   [FN.grantAuthMethodToUsePKP]: {
     tx: TX;
   },
-  [FN.getLoginToken]: SessionSigsMap,
   [FN.grantIPFSCIDtoUsePKP]: {
     tx: TX;
   },
   [FN.executeJs]: null,
+
+  // Tokens creation
+  [FN.createCreditsDelegationToken]: AuthSig,
+  [FN.createAccessToken]: SessionSigsMap,
 }
 
 interface TX {
