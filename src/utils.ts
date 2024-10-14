@@ -7,17 +7,17 @@ export namespace BulkieUtils {
     return await Hash.of(Buffer.from(str)) as IPFSCIDv0;
   };
 
-  export const parseAuthContext = (sessionSigs: SessionSigsMap) => {
-    return Object.values(sessionSigs).map((v) => {
-      const signedMessage = v.signedMessage;
-      const urnLine = signedMessage.match(/urn:recap:[\w\d]+/)![0];
+  export const parseSignedMessage = (signedMessage: string) => {
+    const urnLine = signedMessage.match(/urn:recap:[\w\d]+/)![0];
 
-      const authContext = JSON.parse(atob(urnLine.split(':')[2])).att['lit-resolvedauthcontext://*']['Auth/Auth'][0]['auth_context'];
+    const urn = JSON.parse(atob(urnLine.split(':')[2]));
 
+    let res: any = undefined;
+
+    try {
+      const authContext = urn.att['lit-resolvedauthcontext://*']['Auth/Auth'][0]['auth_context'];
       const extractedCustomAuthResource = (authContext['customAuthResource']).slice(8, -2);
       const result = extractedCustomAuthResource.replace(/\\"/g, '"');
-
-      let res: any;
 
       try {
         res = JSON.parse(result);
@@ -25,10 +25,22 @@ export namespace BulkieUtils {
         res = extractedCustomAuthResource
       }
 
+    } finally {
       return {
         result: res,
-        raw: authContext
-      };
+        raw: urn
+      }
+    }
+  }
+
+  export const parseAuthContext = (sessionSigs: SessionSigsMap) => {
+    return Object.values(sessionSigs).map((v) => {
+      const signedMessage = v.signedMessage;
+
+      const { result } = parseSignedMessage(signedMessage);
+
+      return result;
+
     }).find((v) => v.result !== 'undefined');
   }
 }

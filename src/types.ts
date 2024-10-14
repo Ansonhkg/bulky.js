@@ -1,6 +1,6 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { SessionSigsMap } from '@lit-protocol/types';
+import { AuthSig, SessionSigsMap } from '@lit-protocol/types';
 
 export const FN = {
   // connections
@@ -10,12 +10,17 @@ export const FN = {
   // setters
   'mintPKP': 'mintPKP',
   'mintCreditsToken': 'mintCreditsToken',
+
+  // creating tokens
+  'createCreditsDelegationToken': "createCreditsDelegationToken",
+
+  // granting PKP permissions to do something
   'grantAuthMethodToUsePKP': 'grantAuthMethodToUsePKP',
+  'grantIPFSCIDtoUsePKP': 'grantIPFSCIDtoUsePKP',
 
   // getters
   'getPkps': 'getPkps',
   'getLoginToken': 'getLoginToken',
-  'grantIPFSCIDtoUsePKP': 'grantIPFSCIDtoUsePKP',
   'executeJs': 'executeJs'
 } as const;
 
@@ -31,9 +36,12 @@ export const STEP = {
   [FN.grantAuthMethodToUsePKP]: `${FN.grantAuthMethodToUsePKP} - (to grant an auth method to use the PKP)`,
   [FN.grantIPFSCIDtoUsePKP]: `${FN.grantIPFSCIDtoUsePKP} - (to grant an IPFS CID to use the PKP)`,
 
+  // creating tokens
+  [FN.createCreditsDelegationToken]: `${FN.createCreditsDelegationToken} - (to create a Credits Delegation Token so that your users can use the credits token you minted subject to the addresses you specify)`,
+
   // getters
   [FN.getPkps]: `${FN.getPkps} - (to get all PKPs)`,
-  [FN.getLoginToken]: `${FN.getLoginToken} - (to get a login token. Previously known as 'SessionSigs')`,
+  [FN.getLoginToken]: `${FN.getLoginToken} - (You can use this token to login to Lit Network. Note that you will also need credits to use the Network)`,
 
   // actions
   [FN.executeJs]: `${FN.executeJs} - (to execute a JS code in the Lit Nodes withint a trusted execution environment (TEE) )`
@@ -56,9 +64,8 @@ export type FunctionReturnTypes = {
     ethAddress: HexAddress;
     tx: TX;
   };
-  [FN.mintCreditsToken]: {
-    capacityTokenId: string;
-  },
+  [FN.mintCreditsToken]: string,
+  [FN.createCreditsDelegationToken]: AuthSig,
   [FN.getPkps]: {
     tokenId: PKPTokenId,
     publicKey: string;

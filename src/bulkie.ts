@@ -11,6 +11,7 @@ import {
   LitAccessControlConditionResource,
   LitRLIResource
 } from '@lit-protocol/auth-helpers';
+import { BulkieUtils } from './utils';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -414,11 +415,63 @@ export class Bulkie {
         })
         this._debug(`Capacity Token ID: ${capacityTokenIdStr}`);
 
-        this.outputs.set(FN.mintCreditsToken, {
-          capacityTokenId: capacityTokenIdStr
-        })
+        this.outputs.set(FN.mintCreditsToken, capacityTokenIdStr)
       },
-      []
+      [
+        STEP['createCreditsDelegationToken'],
+      ]
+    )
+  }
+
+  async createCreditsDelegationToken(params: {
+
+    /**
+     * The expiry date of the token in UTC midnight in ISO format. eg. '2022-12-31T00:00:00.000Z'
+     * @example new Date().toISOString()
+     */
+    expiry?: string,
+    creditsTokenId: string,
+    delegatees?: HexAddress[],
+  }) {
+    return this._run(
+      'Create Credits Delegation Token',
+      'createCreditsDelegationToken',
+      async () => {
+
+        if (!this.signer) {
+          throw new Error('Signer is required');
+        }
+
+        this._debug(`Expiry: ${params.expiry}`);
+        this._debug(`Credits Token ID: ${params.creditsTokenId}`);
+        if (params?.delegatees?.length) {
+          this._debug(`Delegatees: ${params?.delegatees!.join(', ')}`);
+        } else {
+          this._debug(`No delegatees provided`);
+        }
+
+        const { capacityDelegationAuthSig } = await this.litNodeClient.createCapacityDelegationAuthSig({
+          ...(params.expiry && { expiration: params.expiry }),
+          dAppOwnerWallet: this.signer,
+          capacityTokenId: params.creditsTokenId,
+          ...(params?.delegatees?.length && { delegateeAddresses: params.delegatees }),
+        });
+
+        this._debug(`Capacity Delegation Token: ${capacityDelegationAuthSig}`);
+
+        try {
+          const resources = BulkieUtils.parseSignedMessage(capacityDelegationAuthSig.signedMessage);
+
+          this._debug(`Resources: ${JSON.stringify(resources.raw)}`);
+        } catch (e) {
+          this._debug(`Error parsing signed message: ${e}`);
+        }
+
+        this.outputs.set('createCreditsDelegationToken', capacityDelegationAuthSig);
+      },
+      [
+        STEP['getLoginToken']
+      ]
     )
   }
 

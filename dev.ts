@@ -25,7 +25,10 @@ console.warn = () => { };
     daysUntilUTCMidnightExpiration: 2
   });
 
-  return;
+  await alice.createCreditsDelegationToken({
+    creditsTokenId: alice.getOutput(FN.mintCreditsToken)!,
+    // delegatees: [],
+  });
 
   await alice.grantAuthMethodToUsePKP({
     pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
