@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
-import { Bulkie, BulkieUtils } from "./src/bulkie";
-import { FN, IPFSCIDv0 } from "./src/types";
+import { Bulkie } from "./src/bulkie";
+import { FN } from "./src/types";
+import { BulkieUtils } from "./src/utils";
 
 console.warn = () => { };
 
@@ -11,7 +12,7 @@ console.warn = () => { };
   const alice = new Bulkie({
     guides: true,
     debug: true,
-    litDebug: true,
+    litDebug: false,
     network: 'datil',
     signer: signer,
   });
@@ -19,20 +20,26 @@ console.warn = () => { };
   await alice.connectToLitNodeClient();
   await alice.connectToLitContracts();
   await alice.mintPKP({ selfFund: true, amountInEth: "0.0001" });
+  await alice.mintCreditsToken({
+    requestsPerKilosecond: 200,
+    daysUntilUTCMidnightExpiration: 2
+  });
 
-  // await alice.grantAuthMethodToUsePKP({
-  //   pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
-  //   authMethodId: 'app-id-xxx:user-id-yyy',
-  //   authMethodType: 918232,
-  //   scopes: ['sign_anything']
-  // });
+  return;
+
+  await alice.grantAuthMethodToUsePKP({
+    pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
+    authMethodId: 'app-id-xxx:user-id-yyy',
+    authMethodType: 918232,
+    scopes: ['sign_anything']
+  });
 
   const litActionCode = `(async () => {
-
     const jsParams = {
       magicNumber: magicNumber,
-      privateKey: privateKey,
-      amountInEth: amountInEth,
+      pkpPublicKey: pkpPublicKey,
+      // privateKey: privateKey,
+      // amountInEth: amountInEth,
       rpcUrl: rpcUrl,
     };
 
@@ -40,24 +47,23 @@ console.warn = () => { };
     const b = 2;
 
     const res = await Lit.Actions.runOnce(
-      { waitForResponse: false, name: '002-bulkie-testing' },
+      { waitForResponse: true, name: '002-bulkie-testing' },
       async () => {
         const provider = new ethers.providers.JsonRpcProvider(jsParams.rpcUrl);
-        // const wallet = ethers.Wallet.createRandom().connect(provider);
-        const wallet = new ethers.Wallet(jsParams.privateKey, provider);
+        const wallet = ethers.Wallet.createRandom().connect(provider);
+        
+        // const wallet = new ethers.Wallet(jsParams.privateKey, provider);
 
-        const tx = await wallet.sendTransaction({
-          to: wallet.address,
-          value: ethers.utils.parseEther(jsParams.amountInEth),
-        });
+        // const tx = await wallet.sendTransaction({
+        //   to: wallet.address,
+        //   value: ethers.utils.parseEther(jsParams.amountInEth),
+        // });
 
-        await tx.wait();
+        // await tx.wait();
 
         return JSON.stringify({ 
           MO: 'FO',
-          privateKey: jsParams.privateKey,
-          tx: tx.hash,
-          data: data,
+          privateKey: wallet.privateKey,
         });
       }
     );
@@ -85,19 +91,18 @@ console.warn = () => { };
     type: 'custom_auth',
     resources: [
       { type: 'pkp-signing', request: '*' },
-      { type: 'lit-action-execution', request: '*' }
+      { type: 'lit-action-execution', request: '*' },
     ],
     code: litActionCode,
     // ipfsCid: ipfsCid,
     jsParams: {
-      // pkpPublicKey: alice.getOutput(FN.mintPKP)?.publicKey as `0x${string}`,
-      magicNumber: 3,
-      privateKey: process.env.PRIVATE_KEY as string,
+      pkpPublicKey: alice.getOutput(FN.mintPKP)?.publicKey as `0x${string}`,
       rpcUrl: 'https://yellowstone-rpc.litprotocol.com',
-      amountInEth: "0.00001",
+      magicNumber: 3,
+      // privateKey: process.env.PRIVATE_KEY as string,
+      // amountInEth: "0.00001",
     },
   });
-
 
   const loginToken = alice.getOutput(FN.getLoginToken);
   console.log("loginToken:", loginToken);
@@ -112,7 +117,7 @@ console.warn = () => { };
   // const res = await litNodeClient?.executeJs({
   //   sessionSigs: loginToken!,
   //   code: `(async () => {
-  //     console.log("Lit.Auth:", Lit.Auth);
+  //     console.log("Testing");
   //   })();`,
   // })
 

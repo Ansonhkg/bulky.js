@@ -1,6 +1,6 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
+import { LIT_NETWORKS_KEYS } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, AuthMethodScope } from '@lit-protocol/constants';
 import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes } from './types';
@@ -11,7 +11,6 @@ import {
   LitAccessControlConditionResource,
   LitRLIResource
 } from '@lit-protocol/auth-helpers';
-import Hash from "typestub-ipfs-only-hash";
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -215,6 +214,10 @@ export class Bulkie {
         require.litContracts();
         require.signer();
         break;
+      case FN.mintCreditsToken:
+        require.litContracts();
+        require.signer();
+        break;
       case FN.getPkps:
         require.litContracts();
         require.signer();
@@ -284,7 +287,8 @@ export class Bulkie {
       },
       [
         STEP['mintPKP'],
-        STEP['getPkps']
+        STEP['getPkps'],
+        STEP['mintCreditsToken']
       ]
     )
   }
@@ -296,11 +300,15 @@ export class Bulkie {
     if (params.selfFund) {
       _nextSteps = [
         STEP['grantAuthMethodToUsePKP'],
-        STEP['grantIPFSCIDtoUsePKP']
+        STEP['grantIPFSCIDtoUsePKP'],
+        STEP['mintCreditsToken'],
       ];
     } else {
       _nextSteps = [
-        UNAVAILABLE_STEP['mint-pkp-no-immediate-steps']
+        UNAVAILABLE_STEP['mint-pkp-tip-1'],
+        STEP['grantAuthMethodToUsePKP'],
+        STEP['grantIPFSCIDtoUsePKP'],
+        STEP['mintCreditsToken'],
       ];
     }
 
@@ -375,6 +383,42 @@ export class Bulkie {
         return this;
       },
       _nextSteps
+    )
+  }
+
+  async mintCreditsToken(params: {
+
+    /**
+     * eg. 1000 requests per kilosecond is 86,000 requests per day
+     * You could also use the calculator here: https://explorer.litprotocol.com/
+     */
+    requestsPerKilosecond: number;
+
+    /**
+     * The number of days until the token expires at UTC midnight.
+     */
+    daysUntilUTCMidnightExpiration: number;
+  }) {
+
+    if (!params.requestsPerKilosecond || !params.daysUntilUTCMidnightExpiration) {
+      throw new Error('requestsPerKilosecond and daysUntilUTCMidnightExpiration are required');
+    }
+
+    return this._run(
+      'Mint Credits Token',
+      FN.mintCreditsToken,
+      async () => {
+        const { capacityTokenIdStr } = await this.litContracts.mintCapacityCreditsNFT({
+          requestsPerKilosecond: params.requestsPerKilosecond,
+          daysUntilUTCMidnightExpiration: params.daysUntilUTCMidnightExpiration,
+        })
+        this._debug(`Capacity Token ID: ${capacityTokenIdStr}`);
+
+        this.outputs.set(FN.mintCreditsToken, {
+          capacityTokenId: capacityTokenIdStr
+        })
+      },
+      []
     )
   }
 
@@ -599,7 +643,6 @@ export class Bulkie {
       async () => {
 
         if (params.type === 'custom_auth') {
-
           const sessionSigs = await this.litNodeClient.getLitActionSessionSigs({
             pkpPublicKey: _pkpPublicKey,
             resourceAbilityRequests: requestAbilityRequests,
@@ -623,34 +666,4 @@ export class Bulkie {
       ]);
   }
 
-}
-
-export namespace BulkieUtils {
-  export const strToIPFSHash = async (str: string): Promise<IPFSCIDv0> => {
-    return await Hash.of(Buffer.from(str)) as IPFSCIDv0;
-  };
-
-  export const parseAuthContext = (sessionSigs: SessionSigsMap) => {
-    return Object.values(sessionSigs).map((v) => {
-      const signedMessage = v.signedMessage;
-      const urnLine = signedMessage.match(/urn:recap:[\w\d]+/)![0];
-
-      const authContext = JSON.parse(atob(urnLine.split(':')[2])).att['lit-resolvedauthcontext://*']['Auth/Auth'][0]['auth_context'];
-
-      const extractedCustomAuthResource = (authContext['customAuthResource']).slice(8, -2);
-      const formattedCustomAuthResource = extractedCustomAuthResource.replace(/\\"/g, '"');
-      let result;
-
-      try {
-        result = JSON.parse(formattedCustomAuthResource);
-      } catch (e) {
-        result = extractedCustomAuthResource
-      }
-
-      return {
-        authContext,
-        formattedCustomAuthResource: result,
-      };
-    })
-  }
 }

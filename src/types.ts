@@ -9,6 +9,7 @@ export const FN = {
 
   // setters
   'mintPKP': 'mintPKP',
+  'mintCreditsToken': 'mintCreditsToken',
   'grantAuthMethodToUsePKP': 'grantAuthMethodToUsePKP',
 
   // getters
@@ -23,9 +24,12 @@ export const STEP = {
   [FN.connectToLitContracts]: `${FN.connectToLitContracts} (to connect to Lit Contracts)`,
 
   // setters
+  [FN.mintPKP]: `${FN.mintPKP} - (to mint a PKP)`,
+  [FN.mintCreditsToken]: `${FN.mintCreditsToken} - (to mint a Credits Token to pay for usage of the Lit Network)`,
+
+  // granting PKP permissions to do something
   [FN.grantAuthMethodToUsePKP]: `${FN.grantAuthMethodToUsePKP} - (to grant an auth method to use the PKP)`,
   [FN.grantIPFSCIDtoUsePKP]: `${FN.grantIPFSCIDtoUsePKP} - (to grant an IPFS CID to use the PKP)`,
-  [FN.mintPKP]: `${FN.mintPKP} - (to mint a PKP)`,
 
   // getters
   [FN.getPkps]: `${FN.getPkps} - (to get all PKPs)`,
@@ -36,12 +40,39 @@ export const STEP = {
 } as const;
 
 export const UNAVAILABLE_STEP = {
-  'mint-pkp-no-immediate-steps': 'No immediate next steps - You can fund the PKP if you want so that you can use it later to send transactions.'
+  'mint-pkp-tip-1': 'You can fund the PKP if you want so that you can use it later to send transactions.'
 } as const;
 
 export type STEP_VALUES = (((typeof STEP)[keyof typeof STEP]) | ((typeof UNAVAILABLE_STEP)[keyof typeof UNAVAILABLE_STEP]))[];
 
 export type BulkieSupportedFunctions = keyof typeof FN;
+
+export type FunctionReturnTypes = {
+  [FN.connectToLitNodeClient]: LitNodeClient;
+  [FN.connectToLitContracts]: LitContracts;
+  [FN.mintPKP]: {
+    tokenId: PKPTokenId;
+    publicKey: string;
+    ethAddress: HexAddress;
+    tx: TX;
+  };
+  [FN.mintCreditsToken]: {
+    capacityTokenId: string;
+  },
+  [FN.getPkps]: {
+    tokenId: PKPTokenId,
+    publicKey: string;
+    ethAddress: HexAddress;
+  },
+  [FN.grantAuthMethodToUsePKP]: {
+    tx: TX;
+  },
+  [FN.getLoginToken]: SessionSigsMap,
+  [FN.grantIPFSCIDtoUsePKP]: {
+    tx: TX;
+  },
+  [FN.executeJs]: null,
+}
 
 interface TX {
   hash: string;
@@ -59,26 +90,3 @@ export type IPFSCIDv0 = `Qm${string}`;
 export type AuthMethodScopes = ('no_permission' | 'sign_anything' | 'eip_191_personal_sign')[];
 
 
-export type FunctionReturnTypes = {
-  [FN.connectToLitNodeClient]: LitNodeClient;
-  [FN.connectToLitContracts]: LitContracts;
-  [FN.mintPKP]: {
-    tokenId: PKPTokenId;
-    publicKey: string;
-    ethAddress: HexAddress;
-    tx: TX;
-  };
-  [FN.getPkps]: {
-    tokenId: PKPTokenId,
-    publicKey: string;
-    ethAddress: HexAddress;
-  },
-  [FN.grantAuthMethodToUsePKP]: {
-    tx: TX;
-  },
-  [FN.getLoginToken]: SessionSigsMap,
-  [FN.grantIPFSCIDtoUsePKP]: {
-    tx: TX;
-  },
-  [FN.executeJs]: null,
-}
