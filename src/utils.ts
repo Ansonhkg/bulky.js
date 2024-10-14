@@ -39,8 +39,9 @@ export namespace BulkieUtils {
 
       const { result } = parseSignedMessage(signedMessage);
 
+      
       return result;
 
-    }).find((v) => v.result !== 'undefined');
+    }).find((v) => v !== 'undefined');
   }
 }

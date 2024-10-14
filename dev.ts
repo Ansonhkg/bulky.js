@@ -105,6 +105,7 @@ console.warn = () => { };
       // privateKey: process.env.PRIVATE_KEY as string,
       // amountInEth: "0.00001",
     },
+    creditsDelegationToken: alice.getOutput(FN.createCreditsDelegationToken),
   });
 
   const loginToken = alice.getOutput(FN.getLoginToken);
@@ -113,18 +114,16 @@ console.warn = () => { };
   const parsedAuthContext = BulkieUtils.parseAuthContext(loginToken!);
   console.log("parsedAuthContext:", parsedAuthContext);
 
-  // const litNodeClient = alice.getOutput(FN.connectToLitNodeClient);
+  const litNodeClient = alice.getOutput(FN.connectToLitNodeClient);
 
-  // console.log("litNodeClient:", litNodeClient);
+  const res = await litNodeClient?.executeJs({
+    sessionSigs: loginToken!,
+    code: `(async () => {
+      console.log("Testing");
+    })();`,
+  })
 
-  // const res = await litNodeClient?.executeJs({
-  //   sessionSigs: loginToken!,
-  //   code: `(async () => {
-  //     console.log("Testing");
-  //   })();`,
-  // })
-
-  // console.log("res:", res);
+  console.log("res:", res);
 
   // this require longer loading time, because it needs to fetch all pkps
   // const pkps = await alice.getPkps();

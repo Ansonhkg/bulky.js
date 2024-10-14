@@ -1,6 +1,6 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { LIT_NETWORKS_KEYS } from '@lit-protocol/types';
+import { AuthSig, LIT_NETWORKS_KEYS } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, AuthMethodScope } from '@lit-protocol/constants';
 import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes } from './types';
@@ -600,7 +600,7 @@ export class Bulkie {
       'access-control-condition-signing',
       request: string | '*'
     }[],
-    delegationToken?: string;
+    creditsDelegationToken?: AuthSig;
   } & (
       (| {
         type: 'native_auth' | 'custom_auth';
@@ -703,7 +703,7 @@ export class Bulkie {
               ? { litActionCode: Buffer.from(params.code).toString('base64') }
               : { litActionIpfsId: params.ipfsCid! }),
             jsParams: params.jsParams,
-            capabilityAuthSigs: [],
+            ...(params.creditsDelegationToken && { capabilityAuthSigs: [params.creditsDelegationToken] }),
           });
 
           this.outputs.set(FN.getLoginToken, sessionSigs);
