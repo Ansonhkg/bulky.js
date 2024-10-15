@@ -113,14 +113,6 @@ console.warn = () => { };
 
   const accessToken = alice.getOutput(FN.createAccessToken);
 
-  // base64 encoded access token
-  const base64AccessToken = Buffer.from(JSON.stringify(accessToken)).toString('base64');
-
-  // write to file
-  const fs = require('fs');
-  fs.writeFileSync('access-token.json', JSON.stringify(accessToken, null, 2));
-  fs.writeFileSync('access-token-base64.json', JSON.stringify(base64AccessToken, null, 2));
-
   const litNodeClient = alice.getOutput(FN.connectToLitNodeClient);
 
   const res = await litNodeClient?.executeJs({

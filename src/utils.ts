@@ -51,3 +51,4 @@ export namespace BulkieUtils {
     return `0x${ethers.utils.keccak256(bytes).slice(2)}`
   };
 }
+
