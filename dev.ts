@@ -20,12 +20,12 @@ console.warn = () => { };
   await alice.connectToLitNodeClient()
     .then((client) => client.connectToLitContracts())
     .then((client) => client.mintPKP({ selfFund: true, amountInEth: "0.0001" }))
-    .then((client) => client.mintCreditsToken({
+    .then((client) => client.mintCreditsNFT({
       requestsPerKilosecond: 200,
       daysUntilUTCMidnightExpiration: 2
     }))
     .then((client) => client.createCreditsDelegationToken({
-      creditsTokenId: client.getOutput(FN.mintCreditsToken)!
+      creditsTokenId: client.getOutput(FN.mintCreditsNFT)!
     }))
     .then((client) => client.grantAuthMethodToUsePKP({
       pkpTokenId: client.getOutput(FN.mintPKP)?.tokenId.hex!,

@@ -9,7 +9,7 @@ export const FN = {
 
   // minting
   'mintPKP': 'mintPKP',
-  'mintCreditsToken': 'mintCreditsToken',
+  'mintCreditsNFT': 'mintCreditsNFT',
 
   // creating tokens
   'createCreditsDelegationToken': "createCreditsDelegationToken",
@@ -21,6 +21,8 @@ export const FN = {
 
   // getters
   'getPkps': 'getPkps',
+
+  // actions
   'executeJs': 'executeJs'
 } as const;
 
@@ -28,9 +30,9 @@ export const STEP = {
   // connections
   [FN.connectToLitContracts]: `${FN.connectToLitContracts} (to connect to Lit Contracts)`,
 
-  // setters
+  // miting
   [FN.mintPKP]: `${FN.mintPKP} - (to mint a PKP)`,
-  [FN.mintCreditsToken]: `${FN.mintCreditsToken} - (to mint a Credits Token to pay for usage of the Lit Network)`,
+  [FN.mintCreditsNFT]: `${FN.mintCreditsNFT} - (to mint a Credits Token to pay for usage of the Lit Network)`,
 
   // granting PKP permissions to do something
   [FN.grantAuthMethodToUsePKP]: `${FN.grantAuthMethodToUsePKP} - (to grant an auth method to use the PKP)`,
@@ -64,7 +66,7 @@ export type FunctionReturnTypes = {
     ethAddress: HexAddress;
     tx: TX;
   };
-  [FN.mintCreditsToken]: string,
+  [FN.mintCreditsNFT]: string,
   [FN.getPkps]: {
     tokenId: PKPTokenId,
     publicKey: string;
