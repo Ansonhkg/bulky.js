@@ -63,7 +63,11 @@ export class Bulkie {
     this.signer = params.signer || undefined;
 
     if (this.signer) {
-      this.signer = this.signer.connect(new ethers.providers.JsonRpcProvider(this.rpc));
+      if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+        this.signer = this.signer.connect(new ethers.providers.JsonRpcProvider(this.rpc));
+      } else {
+        this._debug('This code can only run in Node.js');
+      }
     }
   }
 
@@ -215,7 +219,7 @@ export class Bulkie {
         require.litContracts();
         require.signer();
         break;
-      case FN.mintCreditsToken:
+      case FN.mintCreditsNFT:
         require.litContracts();
         require.signer();
         break;
@@ -267,8 +271,11 @@ export class Bulkie {
       async () => {
 
         if (this.signer) {
-          this.signer = this.signer.connect(new ethers.providers.JsonRpcProvider(this.rpc));
-          this._debug(`Signer connected: ${this.rpc}`)
+          if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+            this.signer = this.signer.connect(new ethers.providers.JsonRpcProvider(this.rpc));
+          } else {
+            this._debug('This code can only run in Node.js');
+          } this._debug(`Signer connected: ${this.rpc}`)
           this._debug(`Signer address:   ${await this.signer.getAddress()}`);
           this._debug(`Signer balance:   ${ethers.utils.formatEther(await this.signer.getBalance())} ETH`);
         }
@@ -289,7 +296,7 @@ export class Bulkie {
       [
         STEP['mintPKP'],
         STEP['getPkps'],
-        STEP['mintCreditsToken']
+        STEP['mintCreditsNFT']
       ]
     )
   }
@@ -302,14 +309,14 @@ export class Bulkie {
       _nextSteps = [
         STEP['grantAuthMethodToUsePKP'],
         STEP['grantIPFSCIDtoUsePKP'],
-        STEP['mintCreditsToken'],
+        STEP['mintCreditsNFT'],
       ];
     } else {
       _nextSteps = [
         UNAVAILABLE_STEP['mint-pkp-tip-1'],
         STEP['grantAuthMethodToUsePKP'],
         STEP['grantIPFSCIDtoUsePKP'],
-        STEP['mintCreditsToken'],
+        STEP['mintCreditsNFT'],
       ];
     }
 
@@ -387,7 +394,7 @@ export class Bulkie {
     )
   }
 
-  async mintCreditsToken(params: {
+  async mintCreditsNFT(params: {
 
     /**
      * eg. 1000 requests per kilosecond is 86,000 requests per day
@@ -407,7 +414,7 @@ export class Bulkie {
 
     return this._run(
       'Mint Credits Token',
-      FN.mintCreditsToken,
+      FN.mintCreditsNFT,
       async () => {
         const { capacityTokenIdStr } = await this.litContracts.mintCapacityCreditsNFT({
           requestsPerKilosecond: params.requestsPerKilosecond,
@@ -415,7 +422,7 @@ export class Bulkie {
         })
         this._debug(`Capacity Token ID: ${capacityTokenIdStr}`);
 
-        this.outputs.set(FN.mintCreditsToken, capacityTokenIdStr);
+        this.outputs.set(FN.mintCreditsNFT, capacityTokenIdStr);
 
         return this;
       },
