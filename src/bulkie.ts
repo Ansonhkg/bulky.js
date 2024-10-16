@@ -2,16 +2,17 @@ import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { AuthSig, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
-import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, AuthMethodScope } from '@lit-protocol/constants';
+import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, LIT_ABILITY } from '@lit-protocol/constants';
 import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes, OutputHandler } from './types';
 import {
-  LitAbility,
+
   LitActionResource,
   LitPKPResource,
   LitAccessControlConditionResource,
   LitRLIResource
 } from '@lit-protocol/auth-helpers';
 import { BulkieUtils } from './utils';
+import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -63,10 +64,16 @@ export class Bulkie {
     this.signer = params.signer || undefined;
 
     if (this.signer) {
-      if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-        this.signer = this.signer.connect(new ethers.providers.JsonRpcProvider(this.rpc));
+      if (typeof window === 'undefined') {
+        // Node.js environment
+        this.signer = this.signer.connect(new JsonRpcProvider(this.rpc));
       } else {
-        this._debug('This code can only run in Node.js');
+        // Browser environment
+        if (window.ethereum) {
+          this.signer = new Web3Provider(window.ethereum).getSigner();
+        } else {
+          this._debug('No web3 provider detected in the browser');
+        }
       }
     }
   }
@@ -182,8 +189,8 @@ export class Bulkie {
       this._guide(`\n\x1b[90m------------------------------------------------------------------------\x1b[0m\n`)
 
       return result;
-    } catch (e) {
-      throw new Error(`Error in ${opName}: ${JSON.stringify(e)}`);
+    } catch (e: any) {
+      throw new Error(`Error in ${opName}: ${e.message}`);
     }
   }
 
@@ -254,7 +261,7 @@ export class Bulkie {
       async () => {
 
         this.litNodeClient = new LitNodeClient({
-          litNetwork: 'datil',
+          litNetwork: this.network,
           debug: this.litDebug,
           rpcUrl: this.rpc
         });
@@ -278,13 +285,24 @@ export class Bulkie {
       async () => {
 
         if (this.signer) {
-          if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-            this.signer = this.signer.connect(new ethers.providers.JsonRpcProvider(this.rpc));
+          if (typeof window === 'undefined') {
+            // Node.js environment
+            this.signer = this.signer.connect(new JsonRpcProvider(this.rpc));
           } else {
-            this._debug('This code can only run in Node.js');
-          } this._debug(`Signer connected: ${this.rpc}`)
-          this._debug(`Signer address:   ${await this.signer.getAddress()}`);
-          this._debug(`Signer balance:   ${ethers.utils.formatEther(await this.signer.getBalance())} ETH`);
+            // Browser environment
+            if (window.ethereum) {
+              this.signer = new Web3Provider(window.ethereum).getSigner();
+            } else {
+              this._debug('No web3 provider detected in the browser');
+            }
+          }
+          this._debug(`Signer connected: ${this.rpc}`);
+          try {
+            this._debug(`Signer address:   ${await this.signer.getAddress()}`);
+            this._debug(`Signer balance:   ${ethers.utils.formatEther(await this.signer.getBalance())} ETH`);
+          } catch (e: any) {
+            this._debug(`Error getting signer address: ${e.message}`);
+          }
         }
 
         this.litContracts = new LitContracts({
@@ -308,11 +326,11 @@ export class Bulkie {
     )
   }
 
-  async mintPKP(params: { selfFund?: boolean, amountInEth?: string } & OutputHandler): Promise<this> {
+  async mintPKP(params?: { selfFund?: boolean, amountInEth?: string } & OutputHandler): Promise<this> {
 
     let _nextSteps: STEP_VALUES = [];
 
-    if (params.selfFund) {
+    if (params?.selfFund) {
       _nextSteps = [
         STEP['grantAuthMethodToUsePKP'],
         STEP['grantIPFSCIDtoUsePKP'],
@@ -332,8 +350,8 @@ export class Bulkie {
       FN.mintPKP,
       async () => {
 
-        const _selfFund = params.selfFund || false;
-        const _amountInEth = params.amountInEth || '0.001';
+        const _selfFund = params?.selfFund || false;
+        const _amountInEth = params?.amountInEth || '0.001';
 
         const res = await this.litContracts.pkpNftContractUtils.write.mint();
 
@@ -569,27 +587,27 @@ export class Bulkie {
         case 'access-control-condition-signing':
           return {
             resource: new LitAccessControlConditionResource(resource.request),
-            ability: LitAbility.AccessControlConditionSigning,
+            ability: LIT_ABILITY.AccessControlConditionSigning,
           }
         case 'access-control-condition-decryption':
           return {
             resource: new LitAccessControlConditionResource(resource.request),
-            ability: LitAbility.AccessControlConditionDecryption,
+            ability: LIT_ABILITY.AccessControlConditionDecryption,
           }
         case 'lit-action-execution':
           return {
             resource: new LitActionResource(resource.request),
-            ability: LitAbility.LitActionExecution,
+            ability: LIT_ABILITY.LitActionExecution,
           }
         case 'rate-limit-increase-auth'
           : return {
             resource: new LitRLIResource(resource.request),
-            ability: LitAbility.RateLimitIncreaseAuth,
+            ability: LIT_ABILITY.RateLimitIncreaseAuth,
           }
         case 'pkp-signing':
           return {
             resource: new LitPKPResource(resource.request),
-            ability: LitAbility.PKPSigning,
+            ability: LIT_ABILITY.PKPSigning,
           }
         default:
           throw new Error(`Resource type ${resource.type} is not supported`);

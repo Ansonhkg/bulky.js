@@ -1,13 +1,13 @@
 {
   "name": "bulkie.js",
-  "version": "0.0.2",
-  "main": "./dist/cjs/bulkie.js",
-  "module": "./dist/esm/bulkie.js",
-  "types": "./dist/types/bulkie.d.ts",
+  "version": "0.0.15",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/cjs/bulkie.js",
-      "import": "./dist/esm/bulkie.js"
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js"
     }
   },
   "license": "MIT",
@@ -23,11 +23,11 @@
     "dist"
   ],
   "dependencies": {
-    "@lit-protocol/accs-schemas": "^0.0.15",
-    "@lit-protocol/constants": "^6.9.0",
-    "@lit-protocol/contracts-sdk": "^6.9.0",
-    "@lit-protocol/lit-node-client": "^6.9.0",
-    "@lit-protocol/types": "^6.9.0",
+    "@lit-protocol/accs-schemas": "0.0.15",
+    "@lit-protocol/constants": "7.0.0-alpha.6",
+    "@lit-protocol/contracts-sdk": "7.0.0-alpha.6",
+    "@lit-protocol/lit-node-client": "7.0.0-alpha.6",
+    "@lit-protocol/types": "7.0.0-alpha.6",
     "ethers": "5.7.2",
     "typestub-ipfs-only-hash": "^4.0.0"
   },

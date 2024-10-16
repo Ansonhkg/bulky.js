@@ -13,6 +13,6 @@
     "skipLibCheck": true
   },
   "include": [
-    "./src/bulkie.ts"
+    "./src/index.ts"
   ]
 }

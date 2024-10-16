@@ -10,3 +10,5 @@ export {
   IPFSCIDv0,
   AuthMethodScopes
 } from "./types";
+
+export { grantCustomAuthUserAccessToken } from "./flows/grantCustomAuthUserAccessToken";
