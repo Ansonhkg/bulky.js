@@ -23,6 +23,7 @@
     "dist"
   ],
   "dependencies": {
+    "@lit-protocol/accs-schemas": "^0.0.15",
     "@lit-protocol/constants": "^6.9.0",
     "@lit-protocol/contracts-sdk": "^6.9.0",
     "@lit-protocol/lit-node-client": "^6.9.0",

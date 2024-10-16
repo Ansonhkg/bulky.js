@@ -1,9 +1,9 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { AuthSig, LIT_NETWORKS_KEYS } from '@lit-protocol/types';
+import { AuthSig, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, AuthMethodScope } from '@lit-protocol/constants';
-import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes } from './types';
+import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes, OutputHandler } from './types';
 import {
   LitAbility,
   LitActionResource,
@@ -74,8 +74,9 @@ export class Bulkie {
   /**
    * ========== Getters ==========
    */
-  getOutput<T extends BulkieSupportedFunctions>(fnName: T): FunctionReturnTypes[T] | undefined {
-    return this.outputs.get(fnName) as FunctionReturnTypes[T] | undefined;
+  getOutput<T extends BulkieSupportedFunctions>(fnName: T, outputId?: string): FunctionReturnTypes[T] | undefined {
+    const key = outputId ? `${fnName}:${outputId}` : fnName;
+    return this.outputs.get(key as BulkieSupportedFunctions) as FunctionReturnTypes[T] | undefined;
   }
 
   getAllOutputs() {
@@ -147,6 +148,12 @@ export class Bulkie {
       console.log(`\x1b[90m[bulkie.js] ${message}\x1b[0m`);
     }
   }
+
+  private _setOutput<T>(fnName: BulkieSupportedFunctions, output: T, outputId?: string): void {
+    const key = outputId ? `${fnName}:${outputId}` : fnName;
+    this.outputs.set(key as BulkieSupportedFunctions, output);
+  }
+
 
   private async _run<T>(
     opName: string,
@@ -239,7 +246,7 @@ export class Bulkie {
   /**
    * ========== Actions ==========
    */
-  async connectToLitNodeClient(): Promise<this> {
+  async connectToLitNodeClient(params?: OutputHandler): Promise<this> {
 
     return this._run(
       'LitNodeClient connection',
@@ -253,7 +260,7 @@ export class Bulkie {
         });
         await this.litNodeClient.connect();
 
-        this.outputs.set(FN.connectToLitNodeClient, this.litNodeClient);
+        this._setOutput(FN.connectToLitNodeClient, this.litNodeClient, params?.outputId);
 
         return this;
       },
@@ -263,7 +270,7 @@ export class Bulkie {
     );
   }
 
-  async connectToLitContracts(): Promise<this> {
+  async connectToLitContracts(params?: OutputHandler): Promise<this> {
 
     return this._run(
       'LitContracts connection',
@@ -289,7 +296,7 @@ export class Bulkie {
 
         await this.litContracts.connect();
 
-        this.outputs.set(FN.connectToLitContracts, this.litContracts);
+        this._setOutput(FN.connectToLitContracts, this.litContracts, params?.outputId);
 
         return this;
       },
@@ -301,7 +308,7 @@ export class Bulkie {
     )
   }
 
-  async mintPKP(params: { selfFund?: boolean, amountInEth?: string }): Promise<this> {
+  async mintPKP(params: { selfFund?: boolean, amountInEth?: string } & OutputHandler): Promise<this> {
 
     let _nextSteps: STEP_VALUES = [];
 
@@ -375,7 +382,7 @@ export class Bulkie {
           }
         }
 
-        this.outputs.set(FN.mintPKP, {
+        this._setOutput(FN.mintPKP, {
           tokenId: {
             hex: res.pkp.tokenId,
             decimal: decimalTokenId,
@@ -386,7 +393,7 @@ export class Bulkie {
             hash: res.tx.hash,
             explorer: hashOnExplorer
           },
-        });
+        }, params?.outputId);
 
         return this;
       },
@@ -406,7 +413,7 @@ export class Bulkie {
      * The number of days until the token expires at UTC midnight.
      */
     daysUntilUTCMidnightExpiration: number;
-  }) {
+  } & OutputHandler) {
 
     if (!params.requestsPerKilosecond || !params.daysUntilUTCMidnightExpiration) {
       throw new Error('requestsPerKilosecond and daysUntilUTCMidnightExpiration are required');
@@ -422,7 +429,7 @@ export class Bulkie {
         })
         this._debug(`Capacity Token ID: ${capacityTokenIdStr}`);
 
-        this.outputs.set(FN.mintCreditsNFT, capacityTokenIdStr);
+        this._setOutput(FN.mintCreditsNFT, capacityTokenIdStr, params?.outputId);
 
         return this;
       },
@@ -441,7 +448,7 @@ export class Bulkie {
     expiry?: string,
     creditsTokenId: string,
     delegatees?: HexAddress[],
-  }) {
+  } & OutputHandler) {
     return this._run(
       'Create Credits Delegation Token',
       'createCreditsDelegationToken',
@@ -476,7 +483,7 @@ export class Bulkie {
           this._debug(`Error parsing signed message: ${e}`);
         }
 
-        this.outputs.set('createCreditsDelegationToken', capacityDelegationAuthSig);
+        this._setOutput('createCreditsDelegationToken', capacityDelegationAuthSig, params?.outputId);
 
         return this;
       },
@@ -503,11 +510,6 @@ export class Bulkie {
         type: 'native_auth' | 'custom_auth';
       } & ({
         jsParams: any;
-        permissions?: {
-          grantIPFSCIDtoUsePKP?: {
-            scopes: AuthMethodScopes;
-          }
-        },
         code: string;
 
         /**
@@ -530,7 +532,7 @@ export class Bulkie {
         ipfsCid: IPFSCIDv0
       }))
       | { type: 'eoa' }
-    )) {
+    ) & OutputHandler) {
 
 
     if (params.type === 'eoa' || params.type === 'native_auth') {
@@ -605,19 +607,6 @@ export class Bulkie {
 
         if (params.type === 'custom_auth') {
 
-          if (params?.permissions?.grantIPFSCIDtoUsePKP) {
-            this._debug(`Enabling IPFS CID permissions`);
-            const _ipfsCid = params?.ipfsCid ? params.ipfsCid : await BulkieUtils.strToIPFSHash(params.code!);
-
-            const _tokenIdHex = BulkieUtils.pubKeyToTokenId(params.pkpPublicKey);
-
-            await this.grantIPFSCIDtoUsePKP({
-              pkpTokenId: _tokenIdHex,
-              ipfsCid: _ipfsCid,
-              scopes: params.permissions.grantIPFSCIDtoUsePKP.scopes,
-            })
-          }
-
           if (!params.creditsDelegationToken) {
             throw new Error('creditsDelegationToken is required');
           }
@@ -625,8 +614,6 @@ export class Bulkie {
           if (!params.code && !params.ipfsCid) {
             throw new Error('Either code or ipfsCid must be provided');
           }
-
-
 
           const sessionSigs = await this.litNodeClient.getLitActionSessionSigs({
             pkpPublicKey: _pkpPublicKey,
@@ -638,7 +625,7 @@ export class Bulkie {
             ...(params.creditsDelegationToken && { capabilityAuthSigs: [params.creditsDelegationToken] }),
           });
 
-          this.outputs.set(FN.createAccessToken, sessionSigs);
+          this._setOutput(FN.createAccessToken, sessionSigs, params?.outputId);
 
           return this;
         } else {
@@ -654,12 +641,7 @@ export class Bulkie {
   /**
    * This function is usually called by the dApp owner.
    */
-  async grantAuthMethodToUsePKP({
-    pkpTokenId,
-    authMethodId,
-    authMethodType,
-    scopes,
-  }: {
+  async grantAuthMethodToUsePKP(params: {
     pkpTokenId: HexAddress;
 
     /**
@@ -672,12 +654,12 @@ export class Bulkie {
      */
     authMethodType: number;
     scopes: AuthMethodScopes
-  }) {
+  } & OutputHandler) {
 
     // no_permission = 0
     // sign_anything = 1
     // eip_191_personal_sign = 2
-    const _scopes = scopes.map(scope => {
+    const _scopes = params.scopes.map(scope => {
       return scope === 'no_permission' ? 0 : scope === 'sign_anything' ? 1 : 2;
     });
 
@@ -686,15 +668,15 @@ export class Bulkie {
       FN.grantAuthMethodToUsePKP,
       async () => {
 
-        this._debug(`authMethodId: ${authMethodId}`);
-        this._debug(`authMethodType: ${authMethodType}`);
-        this._debug(`scopes: ${scopes} | ${_scopes}`);
-        this._debug(`pkpTokenId: ${pkpTokenId}`);
+        this._debug(`authMethodId: ${params.authMethodId}`);
+        this._debug(`authMethodType: ${params.authMethodType}`);
+        this._debug(`scopes: ${params.scopes} | ${_scopes}`);
+        this._debug(`pkpTokenId: ${params.pkpTokenId}`);
 
         const receipt = await this.litContracts.addPermittedAuthMethod({
-          pkpTokenId: pkpTokenId,
-          authMethodId: authMethodId,
-          authMethodType: authMethodType,
+          pkpTokenId: params.pkpTokenId,
+          authMethodId: params.authMethodId,
+          authMethodType: params.authMethodType,
           authMethodScopes: _scopes,
         });
 
@@ -704,12 +686,12 @@ export class Bulkie {
         this._debug(`Transaction hash: ${receipt.transactionHash}`);
         this._debug(`Explorer:         ${hashOnExplorer}`);
 
-        this.outputs.set(FN.grantAuthMethodToUsePKP, {
+        this._setOutput(FN.grantAuthMethodToUsePKP, {
           tx: {
             hash: receipt.transactionHash,
             explorer: hashOnExplorer
           }
-        });
+        }, params?.outputId);
 
         return this;
       },
@@ -723,7 +705,7 @@ export class Bulkie {
     pkpTokenId: HexAddress,
     ipfsCid: IPFSCIDv0,
     scopes: AuthMethodScopes
-  }) {
+  } & OutputHandler) {
 
     // no_permission = 0
     // sign_anything = 1
@@ -753,12 +735,12 @@ export class Bulkie {
         this._debug(`Transaction hash: ${receipt.transactionHash}`);
         this._debug(`Explorer:         ${hashOnExplorer}`);
 
-        this.outputs.set(FN.grantIPFSCIDtoUsePKP, {
+        this._setOutput(FN.grantIPFSCIDtoUsePKP, {
           tx: {
             hash: receipt.transactionHash,
             explorer: hashOnExplorer
           }
-        });
+        }, params?.outputId);
 
         return this;
       },
@@ -769,7 +751,7 @@ export class Bulkie {
   }
 
   async runJs(params: {
-    accessTokens: string,
+    accessTokens: SessionSigsMap,
   }
   ) {
 

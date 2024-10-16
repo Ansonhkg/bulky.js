@@ -100,4 +100,6 @@ export type IPFSCIDv0 = `Qm${string}`;
 
 export type AuthMethodScopes = ('no_permission' | 'sign_anything' | 'eip_191_personal_sign')[];
 
-
+export type OutputHandler = {
+  outputId?: string;
+}

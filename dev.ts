@@ -17,22 +17,44 @@ console.warn = () => { };
     signer: signer,
   });
 
-  await alice.connectToLitNodeClient()
-    .then((client) => client.connectToLitContracts())
-    .then((client) => client.mintPKP({ selfFund: true, amountInEth: "0.0001" }))
-    .then((client) => client.mintCreditsNFT({
-      requestsPerKilosecond: 200,
-      daysUntilUTCMidnightExpiration: 2
-    }))
-    .then((client) => client.createCreditsDelegationToken({
-      creditsTokenId: client.getOutput(FN.mintCreditsNFT)!
-    }))
-    .then((client) => client.grantAuthMethodToUsePKP({
-      pkpTokenId: client.getOutput(FN.mintPKP)?.tokenId.hex!,
-      authMethodId: 'app-id-xxx:user-id-yyy',
-      authMethodType: 918232,
-      scopes: ['sign_anything']
-    }));
+  /**
+   * The theFlowToInitialiseAndGrantPKP function orchestrates the process of connecting to the Lit Node Client,
+   * minting a PKP, creating a Credits NFT, generating a Credits Delegation Token, and 
+   * granting an authentication method to use the PKP.
+   *
+   * This function performs the following steps:
+   * 1. Connects to the Lit Node Client.
+   * 2. Connects to the Lit Contracts.
+   * 3. Mints a PKP with a specified amount of Ether.
+   * 4. Mints a Credits NFT with defined request limits and expiration.
+   * 5. Creates a Credits Delegation Token using the minted Credits NFT.
+   * 6. Grants an auth method to use the PKP with specified parameters.
+   *
+   * WHEN to use this:
+   * This function is intended for dApp owners who need to grant authentication methods to their users,
+   * allowing them to utilise the PKP for secure transactions and interactions within the application.
+   */
+  async function theFlowToInitialiseAndGrantPKP() {
+    await alice.connectToLitNodeClient()
+      .then((client) => client.connectToLitContracts())
+      .then((client) => client.mintPKP({ selfFund: true, amountInEth: "0.0001" }))
+    // .then((client) => client.mintCreditsNFT({
+    //   requestsPerKilosecond: 200,
+    //   daysUntilUTCMidnightExpiration: 2
+    // }))
+    // .then((client) => client.createCreditsDelegationToken({
+    //   creditsTokenId: client.getOutput('mintCreditsNFT')!
+    // }))
+    // .then((client) => client.grantAuthMethodToUsePKP({
+    //   pkpTokenId: client.getOutput('mintPKP')?.tokenId.hex!,
+    //   authMethodId: 'app-id-xxx:user-id-yyy',
+    //   authMethodType: 918232,
+    //   scopes: ['sign_anything']
+    // }));
+  }
+
+  await theFlowToInitialiseAndGrantPKP();
+  process.exit();
 
   const litActionCode = `(async () => {
     const jsParams = {
@@ -75,16 +97,15 @@ console.warn = () => { };
     }else{
       LitActions.setResponse({ response: "false" });  
     }
-
   })()`;
 
-  // const ipfsCid = await BulkieUtils.strToIPFSHash(litActionCode);
+  const ipfsCid = await BulkieUtils.strToIPFSHash(litActionCode);
 
-  // await alice.grantIPFSCIDtoUsePKP({
-  //   pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
-  //   ipfsCid: ipfsCid,
-  //   scopes: ['sign_anything']
-  // });
+  await alice.grantIPFSCIDtoUsePKP({
+    pkpTokenId: alice.getOutput(FN.mintPKP)?.tokenId.hex!,
+    ipfsCid: ipfsCid,
+    scopes: ['sign_anything']
+  });
 
   // Maybe we should add a `permissions` field for access token?
   await alice.createAccessToken({
