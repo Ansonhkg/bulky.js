@@ -5,6 +5,7 @@ import { Bulkie } from "./src/bulkie";
 import { detectedNetwork } from "./dev-utils";
 import { LIT_NETWORKS_KEYS } from "@lit-protocol/types";
 import { BulkieUtils } from "./src/utils";
+import { code } from "./src/lit-actions/dist/foo";
 
 (async () => {
   // await grantCustomAuthUserAccessToken();
@@ -69,27 +70,37 @@ import { BulkieUtils } from "./src/utils";
 
   console.log("accessToken:", accessToken);
 
-  // // write the access token to a file
-  // const fs = require('fs');
-  // fs.writeFileSync('accessToken.json', JSON.stringify(accessToken, null, 2));
+  // write the access token to a file
+  const fs = require('fs');
+  fs.writeFileSync('accessToken.json', JSON.stringify(accessToken, null, 2));
 
   // read the access token from the file and parse it as a JSON object
   // const accessToken = JSON.parse(fs.readFileSync('accessToken.json', 'utf8'));
 
-  const evmPrivateKey = await alice.use(accessToken!).toGeneratePrivateKey({
-    chain: 'evm',
-    memo: 'bulkie-key',
-    accessToken
+  // const evmPrivateKey = await alice.use(accessToken!).toGeneratePrivateKey({
+  //   chain: 'evm',
+  //   memo: 'bulkie-key',
+  //   accessToken
+  // });
+
+  // const solPrivateKey = await alice.use(accessToken!).toGeneratePrivateKey({
+  //   chain: 'solana',
+  //   memo: 'bulkie-key',
+  //   accessToken
+  // });
+
+  // console.log("evmPrivateKey:", evmPrivateKey);
+  // console.log("solPrivateKey:", solPrivateKey);
+
+  const litNodeClient = alice.getOutput('connectToLitNodeClient');
+
+
+  const res = await litNodeClient?.executeJs({
+    sessionSigs: accessToken!,
+    code,
   });
 
-  const solPrivateKey = await alice.use(accessToken!).toGeneratePrivateKey({
-    chain: 'solana',
-    memo: 'bulkie-key',
-    accessToken
-  });
-
-  console.log("evmPrivateKey:", evmPrivateKey);
-  console.log("solPrivateKey:", solPrivateKey);
+  console.log("res:", res);
 
   // await alice.use(accessTokens).generatePrivateKey({
   //   network: 'evm',

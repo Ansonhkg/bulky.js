@@ -13,7 +13,9 @@
   "license": "MIT",
   "scripts": {
     "dev": "bun run dev.ts",
-    "build": "npm run build:cjs && npm run build:esm && npm run build:types",
+    "prebuild": "bun run ./esbuild.config.ts",
+    "build:lit-actions": "bun run ./esbuild.config.ts",
+    "build": "bun run build:cjs && bun run build:esm && bun run build:types",
     "build:cjs": "tsc --project tsconfig.cjs.json",
     "build:esm": "tsc --project tsconfig.esm.json",
     "build:types": "tsc --project tsconfig.types.json",
@@ -29,6 +31,7 @@
     "@lit-protocol/lit-node-client": "7.0.0-alpha.6",
     "@lit-protocol/types": "7.0.0-alpha.6",
     "@lit-protocol/wrapped-keys": "^6.11.0",
+    "@tableland/sdk": "^7.2.1",
     "ethers": "5.7.2",
     "typestub-ipfs-only-hash": "^4.0.0"
   },
@@ -36,6 +39,7 @@
     "bun": ">=0.6.0"
   },
   "devDependencies": {
-    "@types/jszip": "^3.4.0"
+    "@types/jszip": "^3.4.0",
+    "esbuild": "^0.24.0"
   }
 }
