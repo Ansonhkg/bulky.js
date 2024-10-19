@@ -128,7 +128,9 @@ export class Bulkie {
           })
         );
 
-        return res;
+        this._setOutput(FN.getPkps, res);
+
+        return this;
       },
       []
     );
@@ -815,7 +817,7 @@ export class Bulkie {
       } & OutputHandler) => await this._pkpSign({
         accessToken: accessToken,
         pkpPublicKey: params.publicKey,
-        ...params
+        message: params.message
       })
     }
   }
@@ -908,7 +910,6 @@ export class Bulkie {
     if (Buffer.isBuffer(params.message)) {
       messageBuffer = new Uint8Array(params.message);
     } else if (typeof params.message === 'string') {
-      // For both Node.js and browser environments
       const encoder = new TextEncoder();
       messageBuffer = encoder.encode(params.message);
     } else if (typeof params.message === 'number') {
@@ -917,7 +918,11 @@ export class Bulkie {
       messageBuffer = new Uint8Array(params.message);
     }
 
-    const bufferHashMessage = ethers.utils.arrayify(ethers.utils.keccak256(messageBuffer));
+    // If in a Node.js environment or functions expecting Buffer, convert the Uint8Array to Buffer
+    const bufferForKeccak = Buffer.from(messageBuffer);
+
+    const bufferHashMessage = ethers.utils.arrayify(ethers.utils.keccak256(bufferForKeccak));
+
 
     this._debug(`bufferHashMessage: ${bufferHashMessage}`);
 

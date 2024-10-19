@@ -84,12 +84,12 @@ import { code as foocode } from "./src/lit-actions/dist/foo";
   // })
   // console.log("toExecuteJs:", alice.getOutput('toExecuteJs'));
 
-  // await alice.use(accessToken!).toPkpSign({
-  //   publicKey: alice.getOutput('mintPKP')?.publicKey!,
-  //   message: 'hello',
-  // })
+  await alice.use(accessToken!).toPkpSign({
+    publicKey: alice.getOutput('mintPKP')?.publicKey!,
+    message: 'hello',
+  })
 
-  // console.log("toPkpSign:", alice.getOutput('toPkpSign'));
+  console.log("toPkpSign:", alice.getOutput('toPkpSign'));
 
   // await alice.use(accessToken!).toRun('wrapped-keys/generate-private-key', {
   //   chain: 'evm',
@@ -98,8 +98,15 @@ import { code as foocode } from "./src/lit-actions/dist/foo";
 
   // console.log(alice.getOutput('wrapped-keys/generate-private-key'));
 
-  await alice.use(accessToken!).toRun("QmeAvbv5VvbKiLrZik9DtdCCpnyp4tTguTJFBfjaEfjezu", {});
+  // await alice.use(accessToken!).toRun("QmZZ6Zqfo7hCLXzGZQUzSxCRvg3G6qFFWSQT4rqfnCDxti", {});
 
-  console.log(alice.getOutput("QmeAvbv5VvbKiLrZik9DtdCCpnyp4tTguTJFBfjaEfjezu"))
+  // console.log(alice.getOutput("QmZZ6Zqfo7hCLXzGZQUzSxCRvg3G6qFFWSQT4rqfnCDxti"))
+
+  await alice.use(accessToken!).toRun('wrapped-keys/generate-private-key', {
+    chain: 'solana',
+    memo: 'solana-memo'
+  });
+
+  console.log(alice.getOutput('wrapped-keys/generate-private-key'));
 
 })();
