@@ -778,7 +778,7 @@ export class Bulkie {
   /**
    * ========== Using Access Tokens ==========
    */
-  use(accessToken: SessionSigsMap) {
+  use(this: Bulkie, accessToken: SessionSigsMap) {
     const validation = validateSessionSigs(accessToken);
     if (!validation.isValid) {
       throw new Error(`Invalid access token: ${validation.errors}`);
