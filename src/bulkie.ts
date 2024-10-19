@@ -15,7 +15,7 @@ import { BulkieUtils } from './utils';
 import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
 import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
 import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
-import { REPO, REPO_TYPES, RepoParams } from './repo';
+import { PKG, PKG_TYPES, PkgParams } from './repo';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -658,7 +658,7 @@ export class Bulkie {
         }
       },
       [
-        STEP['executeJs'],
+        STEP['toExecuteJs'],
         // STEP['pkpSign']
       ]);
   }
@@ -788,15 +788,9 @@ export class Bulkie {
     this._debug(`formattedSessionSigs: ${formattedSessionSigs}`);
 
     return {
-      // Ensure the methods are correctly bound to the current context
-      // toGeneratePrivateKey: async (params: { chain: 'evm' | 'solana', memo: string } & OutputHandler) => await this._generatePrivateKey({
-      //   chain: params.chain,
-      //   memo: params.memo,
-      //   accessToken: accessToken
-      // }),
-      toRun: async <T extends REPO_TYPES>(
+      toRun: async <T extends PKG_TYPES>(
         repo: T,
-        params: RepoParams[T] & OutputHandler
+        params: PkgParams[T] & OutputHandler
       ) => {
         return await this._toRun(
           repo,
@@ -827,7 +821,7 @@ export class Bulkie {
   }
 
   private async _generatePrivateKey(
-    params: RepoParams['wrapped-keys/generate-private-key'] & {
+    params: PkgParams['wrapped-keys/generate-private-key'] & {
       accessToken: SessionSigsMap
     } & OutputHandler) {
 
@@ -866,7 +860,7 @@ export class Bulkie {
     authMethod?: AuthMethod[],
     jsParams?: {
       [key: string]: any
-    }
+    },
   } & OutputHandler
   ) {
 
@@ -896,7 +890,7 @@ export class Bulkie {
 
         this._debug(`res: ${JSON.stringify(res)}`);
 
-        this._setOutput(FN.toExecuteJs, res, params?.outputId);
+        this._setOutput('toExecuteJs', res, params?.outputId);
 
         return this;
       },
@@ -948,18 +942,18 @@ export class Bulkie {
   }
 
   // -- custom actions
-  private async _toRun<T extends REPO_TYPES>(
-    repo: T,
-    params: RepoParams[T] & OutputHandler,
+  private async _toRun<T extends PKG_TYPES>(
+    pkg: T,
+    params: PkgParams[T] & OutputHandler,
     accessToken?: SessionSigsMap
   ) {
 
     // -- validate
-    if (!Object.values(REPO).includes(repo as any) && !repo.startsWith('Qm')) {
-      throw new Error(`Repo ${repo} is not supported`);
+    if (!Object.values(PKG).includes(pkg as any) && !pkg.startsWith('Qm')) {
+      throw new Error(`pkg ${pkg} is not supported`);
     }
 
-    if (repo === 'wrapped-keys/generate-private-key') {
+    if (pkg === 'wrapped-keys/generate-private-key') {
       return this._generatePrivateKey({
         chain: params.chain,
         memo: params.memo,
@@ -967,12 +961,25 @@ export class Bulkie {
       });
     }
 
-    if (repo.startsWith('Qm')) {
-      return this._executeJs({
-        accessToken: accessToken!,
-        ipfsId: repo,
-        outputId: repo,
-      })
+    if (pkg.startsWith('Qm')) {
+      return this._run(
+        'Run IPFS CID',
+        `Qm${pkg.slice(1)}`,
+        async () => {
+          const res = await this.litNodeClient.executeJs({
+            sessionSigs: accessToken,
+            ipfsId: pkg,
+            ...(params.jsParams && { jsParams: params.jsParams }),
+          });
+
+          this._debug(`res: ${JSON.stringify(res)}`);
+
+          this._setOutput(pkg, res, params?.outputId);
+
+          return this;
+        },
+        []
+      );
     }
   }
 }

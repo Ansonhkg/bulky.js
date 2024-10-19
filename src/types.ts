@@ -1,8 +1,11 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { AuthMethod, AuthSig, SessionSigsMap } from '@lit-protocol/types';
+import { PkgFns, PkgReturnTypes, PkgSteps } from './repo';
 
-export const FN = {
+
+
+export const GeneralFns = {
   // connections
   'connectToLitNodeClient': 'connectToLitNodeClient',
   'connectToLitContracts': 'connectToLitContracts',
@@ -25,9 +28,11 @@ export const FN = {
   // actions
   'toExecuteJs': 'toExecuteJs',
   'toPkpSign': 'toPkpSign',
+} as const;
 
-  // Custom actions
-  'wrapped-keys/generate-private-key': 'wrapped-keys/generate-private-key',
+export const FN = {
+  ...GeneralFns,
+  ...PkgFns,
 } as const;
 
 export const STEP = {
@@ -51,8 +56,8 @@ export const STEP = {
 
   // actions
   [FN.toExecuteJs]: `${FN.toExecuteJs} - (to execute a JS code in the Lit Nodes withint a trusted execution environment (TEE) )`,
-  [FN['wrapped-keys/generate-private-key']]: `${FN['wrapped-keys/generate-private-key']} - (to generate a private key for a given chain)`,
   [FN.toPkpSign]: `${FN.toPkpSign} - (to sign a message with the PKP)`,
+  ...PkgSteps,
 } as const;
 
 export const UNAVAILABLE_STEP = {
@@ -91,16 +96,11 @@ export type FunctionReturnTypes = {
 
   // Actions
   [FN.toExecuteJs]: null,
-  ['wrapped-keys/generate-private-key']: {
-    pkpAddress: HexAddress;
-    generatedPublicKey: string;
-    id: string;
-  },
   [FN.toPkpSign]: {
     signature: string;
   },
   [key: `Qm${string}`]: any;
-}
+} & PkgReturnTypes
 
 interface TX {
   hash: string;
