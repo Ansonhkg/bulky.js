@@ -76,33 +76,30 @@ import { code as foocode } from "./src/lit-actions/dist/foo";
   // const accessToken = JSON.parse(fs.readFileSync('accessToken.json', 'utf8'));
 
   // --------- access token usage ---------
-  await alice.use(accessToken!).toGeneratePrivateKey({
-    chain: 'evm',
-    memo: 'evm-bulkie-key',
-  });
+  // await alice.use(accessToken!).toExecuteJs({
+  //   code: `(async()=> { console.log("MAGIC NUMBER:", magicNumber) })();`,
+  //   jsParams: {
+  //     magicNumber: 3,
+  //   }
+  // })
+  // console.log("toExecuteJs:", alice.getOutput('toExecuteJs'));
 
-  await alice.use(accessToken!).toGeneratePrivateKey({
-    chain: 'solana',
-    memo: 'solana-bulkie-key',
-  });
+  // await alice.use(accessToken!).toPkpSign({
+  //   publicKey: alice.getOutput('mintPKP')?.publicKey!,
+  //   message: 'hello',
+  // })
 
-  console.log("evmPrivateKey:", alice.getOutput('toGeneratePrivateKey'));
-  console.log("solPrivateKey:", alice.getOutput('toGeneratePrivateKey'));
+  // console.log("toPkpSign:", alice.getOutput('toPkpSign'));
 
+  // await alice.use(accessToken!).toRun('wrapped-keys/generate-private-key', {
+  //   chain: 'evm',
+  //   memo: 'hello',
+  // });
 
-  await alice.use(accessToken!).toExecuteJs({
-    code: `(async()=> { console.log("MAGIC NUMBER:", magicNumber) })();`,
-    jsParams: {
-      magicNumber: 3,
-    }
-  })
-  console.log("toExecuteJs:", alice.getOutput('toExecuteJs'));
+  // console.log(alice.getOutput('wrapped-keys/generate-private-key'));
 
-  await alice.use(accessToken!).toPkpSign({
-    publicKey: alice.getOutput('mintPKP')?.publicKey!,
-    message: 'hello',
-  })
+  await alice.use(accessToken!).toRun("QmeAvbv5VvbKiLrZik9DtdCCpnyp4tTguTJFBfjaEfjezu", {});
 
-  console.log("toPkpSign:", alice.getOutput('toPkpSign'));
+  console.log(alice.getOutput("QmeAvbv5VvbKiLrZik9DtdCCpnyp4tTguTJFBfjaEfjezu"))
 
 })();

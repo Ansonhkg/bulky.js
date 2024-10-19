@@ -23,9 +23,11 @@ export const FN = {
   'getPkps': 'getPkps',
 
   // actions
-  'toGeneratePrivateKey': 'toGeneratePrivateKey',
   'toExecuteJs': 'toExecuteJs',
   'toPkpSign': 'toPkpSign',
+
+  // Custom actions
+  'wrapped-keys/generate-private-key': 'wrapped-keys/generate-private-key',
 } as const;
 
 export const STEP = {
@@ -49,7 +51,7 @@ export const STEP = {
 
   // actions
   [FN.toExecuteJs]: `${FN.toExecuteJs} - (to execute a JS code in the Lit Nodes withint a trusted execution environment (TEE) )`,
-  [FN.toGeneratePrivateKey]: `${FN.toGeneratePrivateKey} - (to generate a private key for a given chain)`,
+  [FN['wrapped-keys/generate-private-key']]: `${FN['wrapped-keys/generate-private-key']} - (to generate a private key for a given chain)`,
   [FN.toPkpSign]: `${FN.toPkpSign} - (to sign a message with the PKP)`,
 } as const;
 
@@ -59,7 +61,7 @@ export const UNAVAILABLE_STEP = {
 
 export type STEP_VALUES = (((typeof STEP)[keyof typeof STEP]) | ((typeof UNAVAILABLE_STEP)[keyof typeof UNAVAILABLE_STEP]))[];
 
-export type BulkieSupportedFunctions = keyof typeof FN;
+export type BulkieSupportedFunctions = keyof typeof FN | `Qm${string}`;
 
 export type FunctionReturnTypes = {
   [FN.connectToLitNodeClient]: LitNodeClient;
@@ -89,14 +91,15 @@ export type FunctionReturnTypes = {
 
   // Actions
   [FN.toExecuteJs]: null,
-  [FN.toGeneratePrivateKey]: {
+  ['wrapped-keys/generate-private-key']: {
     pkpAddress: HexAddress;
     generatedPublicKey: string;
     id: string;
   },
   [FN.toPkpSign]: {
     signature: string;
-  }
+  },
+  [key: `Qm${string}`]: any;
 }
 
 interface TX {

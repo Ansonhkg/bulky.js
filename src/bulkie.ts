@@ -15,6 +15,7 @@ import { BulkieUtils } from './utils';
 import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
 import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
 import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
+import { REPO, REPO_TYPES, RepoParams } from './repo';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -788,11 +789,21 @@ export class Bulkie {
 
     return {
       // Ensure the methods are correctly bound to the current context
-      toGeneratePrivateKey: async (params: { chain: 'evm' | 'solana', memo: string } & OutputHandler) => await this._generatePrivateKey({
-        chain: params.chain,
-        memo: params.memo,
-        accessToken: accessToken
-      }),
+      // toGeneratePrivateKey: async (params: { chain: 'evm' | 'solana', memo: string } & OutputHandler) => await this._generatePrivateKey({
+      //   chain: params.chain,
+      //   memo: params.memo,
+      //   accessToken: accessToken
+      // }),
+      toRun: async <T extends REPO_TYPES>(
+        repo: T,
+        params: RepoParams[T] & OutputHandler
+      ) => {
+        return await this._toRun(
+          repo,
+          params,
+          accessToken
+        );
+      },
       toExecuteJs: async (params: {
         code?: string,
         ipfsId?: IPFSCIDv0,
@@ -815,15 +826,14 @@ export class Bulkie {
     }
   }
 
-  private async _generatePrivateKey(params: {
-    chain: 'evm' | 'solana',
-    memo: string,
-    accessToken: SessionSigsMap
-  } & OutputHandler) {
+  private async _generatePrivateKey(
+    params: RepoParams['wrapped-keys/generate-private-key'] & {
+      accessToken: SessionSigsMap
+    } & OutputHandler) {
 
     return this._run(
       'Generate Private Key',
-      FN.toGeneratePrivateKey,
+      'wrapped-keys/generate-private-key',
       async () => {
         const { pkpAddress, generatedPublicKey, id } = await wrappedKeysApi.generatePrivateKey({
           pkpSessionSigs: params.accessToken,
@@ -840,7 +850,7 @@ export class Bulkie {
 
         this._debug(`privateKeyResult: ${JSON.stringify(result)}`);
 
-        this._setOutput(FN.toGeneratePrivateKey, result, params?.outputId);
+        this._setOutput('wrapped-keys/generate-private-key', result, params?.outputId);
 
         return this;
       },
@@ -848,6 +858,7 @@ export class Bulkie {
     );
   }
 
+  // -- native actions
   private async _executeJs(params: {
     accessToken: SessionSigsMap,
     code?: string,
@@ -934,6 +945,34 @@ export class Bulkie {
       },
       []
     )
+  }
 
+  // -- custom actions
+  private async _toRun<T extends REPO_TYPES>(
+    repo: T,
+    params: RepoParams[T] & OutputHandler,
+    accessToken?: SessionSigsMap
+  ) {
+
+    // -- validate
+    if (!Object.values(REPO).includes(repo as any) && !repo.startsWith('Qm')) {
+      throw new Error(`Repo ${repo} is not supported`);
+    }
+
+    if (repo === 'wrapped-keys/generate-private-key') {
+      return this._generatePrivateKey({
+        chain: params.chain,
+        memo: params.memo,
+        accessToken: accessToken!
+      });
+    }
+
+    if (repo.startsWith('Qm')) {
+      return this._executeJs({
+        accessToken: accessToken!,
+        ipfsId: repo,
+        outputId: repo,
+      })
+    }
   }
 }
