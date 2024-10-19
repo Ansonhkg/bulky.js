@@ -5,7 +5,7 @@ import { Bulkie } from "./src/bulkie";
 import { detectedNetwork } from "./dev-utils";
 import { LIT_NETWORKS_KEYS } from "@lit-protocol/types";
 import { BulkieUtils } from "./src/utils";
-import { code } from "./src/lit-actions/dist/foo";
+import { code as foocode } from "./src/lit-actions/dist/foo";
 
 (async () => {
   // await grantCustomAuthUserAccessToken();
@@ -68,43 +68,41 @@ import { code } from "./src/lit-actions/dist/foo";
 
   const accessToken = alice.getOutput('createAccessToken');
 
-  console.log("accessToken:", accessToken);
-
   // write the access token to a file
-  const fs = require('fs');
-  fs.writeFileSync('accessToken.json', JSON.stringify(accessToken, null, 2));
+  // const fs = require('fs');
+  // fs.writeFileSync('accessToken.json', JSON.stringify(accessToken, null, 2));
 
   // read the access token from the file and parse it as a JSON object
   // const accessToken = JSON.parse(fs.readFileSync('accessToken.json', 'utf8'));
 
-  // const evmPrivateKey = await alice.use(accessToken!).toGeneratePrivateKey({
-  //   chain: 'evm',
-  //   memo: 'bulkie-key',
-  //   accessToken
-  // });
-
-  // const solPrivateKey = await alice.use(accessToken!).toGeneratePrivateKey({
-  //   chain: 'solana',
-  //   memo: 'bulkie-key',
-  //   accessToken
-  // });
-
-  // console.log("evmPrivateKey:", evmPrivateKey);
-  // console.log("solPrivateKey:", solPrivateKey);
-
-  const litNodeClient = alice.getOutput('connectToLitNodeClient');
-
-
-  const res = await litNodeClient?.executeJs({
-    sessionSigs: accessToken!,
-    code,
+  // --------- access token usage ---------
+  await alice.use(accessToken!).toGeneratePrivateKey({
+    chain: 'evm',
+    memo: 'evm-bulkie-key',
   });
 
-  console.log("res:", res);
+  await alice.use(accessToken!).toGeneratePrivateKey({
+    chain: 'solana',
+    memo: 'solana-bulkie-key',
+  });
 
-  // await alice.use(accessTokens).generatePrivateKey({
-  //   network: 'evm',
-  //   memo: 'bulkie-key'
-  // })
+  console.log("evmPrivateKey:", alice.getOutput('toGeneratePrivateKey'));
+  console.log("solPrivateKey:", alice.getOutput('toGeneratePrivateKey'));
+
+
+  await alice.use(accessToken!).toExecuteJs({
+    code: `(async()=> { console.log("MAGIC NUMBER:", magicNumber) })();`,
+    jsParams: {
+      magicNumber: 3,
+    }
+  })
+  console.log("toExecuteJs:", alice.getOutput('toExecuteJs'));
+
+  await alice.use(accessToken!).toPkpSign({
+    publicKey: alice.getOutput('mintPKP')?.publicKey!,
+    message: 'hello',
+  })
+
+  console.log("toPkpSign:", alice.getOutput('toPkpSign'));
 
 })();

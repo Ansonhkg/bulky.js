@@ -1,6 +1,6 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { AuthSig, SessionSigsMap } from '@lit-protocol/types';
+import { AuthMethod, AuthSig, SessionSigsMap } from '@lit-protocol/types';
 
 export const FN = {
   // connections
@@ -23,7 +23,9 @@ export const FN = {
   'getPkps': 'getPkps',
 
   // actions
-  'executeJs': 'executeJs'
+  'toGeneratePrivateKey': 'toGeneratePrivateKey',
+  'toExecuteJs': 'toExecuteJs',
+  'toPkpSign': 'toPkpSign',
 } as const;
 
 export const STEP = {
@@ -46,7 +48,9 @@ export const STEP = {
   [FN.getPkps]: `${FN.getPkps} - (to get all PKPs)`,
 
   // actions
-  [FN.executeJs]: `${FN.executeJs} - (to execute a JS code in the Lit Nodes withint a trusted execution environment (TEE) )`
+  [FN.toExecuteJs]: `${FN.toExecuteJs} - (to execute a JS code in the Lit Nodes withint a trusted execution environment (TEE) )`,
+  [FN.toGeneratePrivateKey]: `${FN.toGeneratePrivateKey} - (to generate a private key for a given chain)`,
+  [FN.toPkpSign]: `${FN.toPkpSign} - (to sign a message with the PKP)`,
 } as const;
 
 export const UNAVAILABLE_STEP = {
@@ -62,7 +66,7 @@ export type FunctionReturnTypes = {
   [FN.connectToLitContracts]: LitContracts;
   [FN.mintPKP]: {
     tokenId: PKPTokenId;
-    publicKey: string;
+    publicKey: HexAddress;
     ethAddress: HexAddress;
     tx: TX;
   };
@@ -78,11 +82,21 @@ export type FunctionReturnTypes = {
   [FN.grantIPFSCIDtoUsePKP]: {
     tx: TX;
   },
-  [FN.executeJs]: null,
 
   // Tokens creation
   [FN.createCreditsDelegationToken]: AuthSig,
   [FN.createAccessToken]: SessionSigsMap,
+
+  // Actions
+  [FN.toExecuteJs]: null,
+  [FN.toGeneratePrivateKey]: {
+    pkpAddress: HexAddress;
+    generatedPublicKey: string;
+    id: string;
+  },
+  [FN.toPkpSign]: {
+    signature: string;
+  }
 }
 
 interface TX {

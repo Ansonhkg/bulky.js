@@ -12,7 +12,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "dev": "bun run dev.ts",
+    "dev": "bun run prebuild && bun run dev.ts",
     "prebuild": "bun run ./esbuild.config.ts",
     "build:lit-actions": "bun run ./esbuild.config.ts",
     "build": "bun run build:cjs && bun run build:esm && bun run build:types",

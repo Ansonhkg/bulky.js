@@ -5,8 +5,11 @@
  */
 import { ethers } from "ethers";
 
-(async () => {
+declare global {
+  const magicNumber: number;
+}
 
+(async () => {
   const res = await Lit.Actions.runOnce({
     waitForResponse: true,
     name: '001-ethers-private-key'
@@ -18,7 +21,7 @@ import { ethers } from "ethers";
     return wallet.privateKey;
   });
 
-  console.log("Hakuna Matata")
+  console.log(`Hakuna Matata, ya magic number ist: ${magicNumber}`);
 
   Lit.Actions.setResponse({
     response: JSON.stringify({

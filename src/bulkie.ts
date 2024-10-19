@@ -1,6 +1,6 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { AuthSig, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
+import { AuthMethod, AuthSig, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, LIT_ABILITY } from '@lit-protocol/constants';
 import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes, OutputHandler } from './types';
@@ -163,7 +163,6 @@ export class Bulkie {
     this.outputs.set(key as BulkieSupportedFunctions, output);
   }
 
-
   private async _run<T>(
     opName: string,
     fnName: BulkieSupportedFunctions,
@@ -247,6 +246,8 @@ export class Bulkie {
         require.litContracts();
         require.signer();
       case FN.createAccessToken:
+        require.litNodeClient();
+      case FN.toExecuteJs:
         require.litNodeClient();
       default:
     }
@@ -786,38 +787,153 @@ export class Bulkie {
     this._debug(`formattedSessionSigs: ${formattedSessionSigs}`);
 
     return {
-      toGeneratePrivateKey: this._generatePrivateKey.bind(this),
+      // Ensure the methods are correctly bound to the current context
+      toGeneratePrivateKey: async (params: { chain: 'evm' | 'solana', memo: string } & OutputHandler) => await this._generatePrivateKey({
+        chain: params.chain,
+        memo: params.memo,
+        accessToken: accessToken
+      }),
+      toExecuteJs: async (params: {
+        code?: string,
+        ipfsId?: IPFSCIDv0,
+        authMethod?: AuthMethod[],
+        jsParams?: {
+          [key: string]: any
+        }
+      } & OutputHandler) => await this._executeJs({
+        accessToken: accessToken,
+        ...params
+      }),
+      toPkpSign: async (params: {
+        publicKey: HexAddress,
+        message: string | Buffer | Uint8Array | number,
+      } & OutputHandler) => await this._pkpSign({
+        accessToken: accessToken,
+        pkpPublicKey: params.publicKey,
+        ...params
+      })
     }
   }
 
-  private async _generatePrivateKey({
-    chain,
-    memo,
-    accessToken
-  }: {
+  private async _generatePrivateKey(params: {
     chain: 'evm' | 'solana',
     memo: string,
     accessToken: SessionSigsMap
-  }): Promise<{ pkpAddress: HexAddress, generatedPublicKey: string, id: string }> {
+  } & OutputHandler) {
 
-    const { pkpAddress, generatedPublicKey, id } = await wrappedKeysApi.generatePrivateKey({
-      pkpSessionSigs: accessToken,
-      network: chain,
-      litNodeClient: this.litNodeClient as any,
-      memo
-    })
+    return this._run(
+      'Generate Private Key',
+      FN.toGeneratePrivateKey,
+      async () => {
+        const { pkpAddress, generatedPublicKey, id } = await wrappedKeysApi.generatePrivateKey({
+          pkpSessionSigs: params.accessToken,
+          network: params.chain,
+          litNodeClient: this.litNodeClient as any,
+          memo: params.memo
+        });
 
-    return {
-      pkpAddress: pkpAddress as HexAddress,
-      generatedPublicKey,
-      id
+        const result = {
+          pkpAddress: pkpAddress as HexAddress,
+          generatedPublicKey,
+          id
+        };
+
+        this._debug(`privateKeyResult: ${JSON.stringify(result)}`);
+
+        this._setOutput(FN.toGeneratePrivateKey, result, params?.outputId);
+
+        return this;
+      },
+      []
+    );
+  }
+
+  private async _executeJs(params: {
+    accessToken: SessionSigsMap,
+    code?: string,
+    ipfsId?: IPFSCIDv0,
+    authMethod?: AuthMethod[],
+    jsParams?: {
+      [key: string]: any
     }
-  }
-
-  async runJs(params: {
-    accessTokens: SessionSigsMap,
-  }
+  } & OutputHandler
   ) {
+
+    if (!params.accessToken) {
+      throw new Error('accessToken is required');
+    }
+
+    if (params.code && params.ipfsId) {
+      throw new Error('code and ipfsId cannot be both exist at the same time, only one of them is required');
+    }
+
+    if (!params.code && !params.ipfsId) {
+      throw new Error('Either code or ipfsId is required');
+    }
+
+    return this._run(
+      'Run JS',
+      'toExecuteJs',
+      async () => {
+        const res = await this.litNodeClient.executeJs({
+          sessionSigs: params.accessToken,
+          ...(params.code && { code: params.code }),
+          ...(params.ipfsId && { ipfsId: params.ipfsId }),
+          ...(params.authMethod && { authMethod: params.authMethod }),
+          ...(params.jsParams && { jsParams: params.jsParams }),
+        });
+
+        this._debug(`res: ${JSON.stringify(res)}`);
+
+        this._setOutput(FN.toExecuteJs, res, params?.outputId);
+
+        return this;
+      },
+      []
+    );
+  }
+  private async _pkpSign(params: {
+    accessToken: SessionSigsMap,
+    pkpPublicKey: HexAddress,
+    message: string | Buffer | Uint8Array | number,
+  } & OutputHandler) {
+    // Convert message to Uint8Array if it's not already a Buffer or Uint8Array
+    let messageBuffer: Uint8Array;
+
+    if (Buffer.isBuffer(params.message)) {
+      messageBuffer = new Uint8Array(params.message);
+    } else if (typeof params.message === 'string') {
+      // For both Node.js and browser environments
+      const encoder = new TextEncoder();
+      messageBuffer = encoder.encode(params.message);
+    } else if (typeof params.message === 'number') {
+      messageBuffer = new Uint8Array(new Uint32Array([params.message]).buffer);
+    } else {
+      messageBuffer = new Uint8Array(params.message);
+    }
+
+    const bufferHashMessage = ethers.utils.arrayify(ethers.utils.keccak256(messageBuffer));
+
+    this._debug(`bufferHashMessage: ${bufferHashMessage}`);
+
+    return this._run(
+      'Pkp Sign',
+      'toPkpSign',
+      async () => {
+        const res = await this.litNodeClient.pkpSign({
+          pubKey: params.pkpPublicKey as HexAddress,
+          toSign: bufferHashMessage,
+          sessionSigs: params.accessToken
+        });
+
+        this._debug(`res: ${JSON.stringify(res)}`);
+
+        this._setOutput(FN.toPkpSign, res, params?.outputId);
+
+        return this
+      },
+      []
+    )
 
   }
 }
