@@ -13,6 +13,8 @@ import {
 } from '@lit-protocol/auth-helpers';
 import { BulkieUtils } from './utils';
 import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
+import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
+import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -510,7 +512,9 @@ export class Bulkie {
       ]
     )
   }
+
   async createAccessToken(params: {
+    expiration?: string; // ISO string
     pkpPublicKey: HexAddress;
     type: 'custom_auth' | 'native_auth' | 'eoa',
     resources: {
@@ -634,6 +638,7 @@ export class Bulkie {
           }
 
           const sessionSigs = await this.litNodeClient.getLitActionSessionSigs({
+            expiration: params.expiration || new Date(Date.now() + 15 * 60 * 1000).toISOString(),
             pkpPublicKey: _pkpPublicKey,
             resourceAbilityRequests: requestAbilityRequests,
             ...(params.code && !params.ipfsCid
@@ -766,6 +771,47 @@ export class Bulkie {
         STEP['createAccessToken']
       ]
     )
+  }
+
+  /**
+   * ========== Using Access Tokens ==========
+   */
+  use(accessToken: SessionSigsMap) {
+    const validation = validateSessionSigs(accessToken);
+    if (!validation.isValid) {
+      throw new Error(`Invalid access token: ${validation.errors}`);
+    }
+
+    const formattedSessionSigs = formatSessionSigs(JSON.stringify(accessToken));
+    this._debug(`formattedSessionSigs: ${formattedSessionSigs}`);
+
+    return {
+      toGeneratePrivateKey: this._generatePrivateKey.bind(this),
+    }
+  }
+
+  private async _generatePrivateKey({
+    chain,
+    memo,
+    accessToken
+  }: {
+    chain: 'evm' | 'solana',
+    memo: string,
+    accessToken: SessionSigsMap
+  }): Promise<{ pkpAddress: HexAddress, generatedPublicKey: string, id: string }> {
+
+    const { pkpAddress, generatedPublicKey, id } = await wrappedKeysApi.generatePrivateKey({
+      pkpSessionSigs: accessToken,
+      network: chain,
+      litNodeClient: this.litNodeClient as any,
+      memo
+    })
+
+    return {
+      pkpAddress: pkpAddress as HexAddress,
+      generatedPublicKey,
+      id
+    }
   }
 
   async runJs(params: {
