@@ -73,8 +73,8 @@ const wrapIIFEInStringPlugin = {
         // 1. remove var t=o(\"ethers\");
         // 2. replace t.ethers to ethers
         content = content
-          .replace(/var t=o\("ethers"\);/g, "")
-          .replace(/t\.ethers/g, "ethers");
+          .replace(/var\s+\w+=\w+\("ethers"\);/g, "")
+          .replace(/[a-zA-Z]\.ethers/g, "ethers");
 
         // Use JSON.stringify to safely encode the content
         const wrappedContent = `/**
@@ -130,6 +130,7 @@ Promise.all(promises)
         });
       }
     });
+
     const endTime = Date.now();
     const buildTime = (endTime - startTime) / 1000; // Convert to seconds
     const msg = `✅ Lit actions built successfully in ${buildTime.toFixed(2)} seconds`;
