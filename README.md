@@ -3,6 +3,7 @@
 The Bulkie SDK provides a simplified interface for interacting with the Lit Protocol. It covers basic development flows for various use cases, such as those found in developer guides and hackathon code.
 
 ## API Doc
+
 https://bulkiejs.vercel.app/
 
 ## Table of Contents
@@ -19,22 +20,22 @@ https://bulkiejs.vercel.app/
 
 ## API Overview
 
-| Method Name                          | Description                                           | Parameters                                                                                      | Return Type         |
-|--------------------------------------|-------------------------------------------------------|-------------------------------------------------------------------------------------------------|----------------------|
-| `new Bulkie(params)`                 | Creates a new instance of the Bulkie SDK.            | `network`, `debug?`, `litDebug?`, `guides?`, `signer?`, `rpc?`                               | `Bulkie`             |
-| `connectToLitNodeClient(params?)`   | Connects to the Lit Node Client.                     | `params.outputId?`                                                                              | `Promise<this>`      |
-| `connectToLitContracts(params?)`     | Connects to the Lit Contracts.                        | `params.outputId?`                                                                              | `Promise<this>`      |
-| `mintPKP(params?)`                   | Mints a Programmable Key Pair (PKP).                 | `selfFund?`, `amountInEth?`, `params.outputId?`                                              | `Promise<this>`      |
-| `mintCreditsNFT(params)`             | Mints a Credits NFT.                                 | `requestsPerKilosecond`, `daysUntilUTCMidnightExpiration`, `params.outputId?`                | `Promise<this>`      |
-| `createCreditsDelegationToken(params)`| Creates a Credits Delegation Token.                  | `expiry?`, `creditsTokenId`, `delegatees?`, `params.outputId?`                               | `Promise<this>`      |
-| `createAccessToken(params)`          | Creates an Access Token.                             | `expiration?`, `pkpPublicKey`, `type`, `resources`, `creditsDelegationToken?`, `params.outputId?` | `Promise<this>`      |
-| `grantAuthMethodToUsePKP(params)`   | Grants an auth method permission to use a PKP.      | `pkpTokenId`, `authMethodId`, `authMethodType`, `scopes`, `params.outputId?`                | `Promise<this>`      |
-| `grantIPFSCIDtoUsePKP(params)`      | Grants an IPFS CID permission to use a PKP.         | `pkpTokenId`, `ipfsCid`, `scopes`, `params.outputId?`                                       | `Promise<this>`      |
-| `getPkps()`                          | Retrieves all PKPs associated with the signer's address.| None                                                                                           | `Promise<this>`      |
-| `use(accessToken)`                   | Provides methods to use an access token for various actions.| `accessToken`                                                                                  | Object with methods   |
-| `getOutput(fnName, outputId?)`      | Retrieves the output of a specific function.         | `fnName`, `outputId?`                                                                          | `FunctionReturnTypes[T] | undefined` |
-| `getAllOutputs()`                    | Retrieves all outputs.                               | None                                                                                           | `Map<BulkieSupportedFunctions, any>` |
-| `getTotalExecutionTime()`            | Retrieves the total execution time of all operations. | None                                                                                           | `{ ms: number, s: number }` |
+| Method Name                            | Description                                                  | Parameters                                                                                        | Return Type                          |
+| -------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------- |
+| `new Bulkie(params)`                   | Creates a new instance of the Bulkie SDK.                    | `network`, `debug?`, `litDebug?`, `guides?`, `signer?`, `rpc?`                                    | `Bulkie`                             |
+| `connectToLitNodeClient(params?)`      | Connects to the Lit Node Client.                             | `params.outputId?`                                                                                | `Promise<this>`                      |
+| `connectToLitContracts(params?)`       | Connects to the Lit Contracts.                               | `params.outputId?`                                                                                | `Promise<this>`                      |
+| `mintPKP(params?)`                     | Mints a Programmable Key Pair (PKP).                         | `selfFund?`, `amountInEth?`, `params.outputId?`                                                   | `Promise<this>`                      |
+| `mintCreditsNFT(params)`               | Mints a Credits NFT.                                         | `requestsPerKilosecond`, `daysUntilUTCMidnightExpiration`, `params.outputId?`                     | `Promise<this>`                      |
+| `createCreditsDelegationToken(params)` | Creates a Credits Delegation Token.                          | `expiry?`, `creditsTokenId`, `delegatees?`, `params.outputId?`                                    | `Promise<this>`                      |
+| `createAccessToken(params)`            | Creates an Access Token.                                     | `expiration?`, `pkpPublicKey`, `type`, `resources`, `creditsDelegationToken?`, `params.outputId?` | `Promise<this>`                      |
+| `grantAuthMethodToUsePKP(params)`      | Grants an auth method permission to use a PKP.               | `pkpTokenId`, `authMethodId`, `authMethodType`, `scopes`, `params.outputId?`                      | `Promise<this>`                      |
+| `grantIPFSCIDtoUsePKP(params)`         | Grants an IPFS CID permission to use a PKP.                  | `pkpTokenId`, `ipfsCid`, `scopes`, `params.outputId?`                                             | `Promise<this>`                      |
+| `getPkps()`                            | Retrieves all PKPs associated with the signer's address.     | None                                                                                              | `Promise<this>`                      |
+| `use(accessToken)`                     | Provides methods to use an access token for various actions. | `accessToken`                                                                                     | Object with methods                  |
+| `getOutput(fnName, outputId?)`         | Retrieves the output of a specific function.                 | `fnName`, `outputId?`                                                                             | `FunctionReturnTypes[T]              | undefined` |
+| `getAllOutputs()`                      | Retrieves all outputs.                                       | None                                                                                              | `Map<BulkieSupportedFunctions, any>` |
+| `getTotalExecutionTime()`              | Retrieves the total execution time of all operations.        | None                                                                                              | `{ ms: number, s: number }`          |
 
 ## Constructor
 
@@ -235,19 +236,29 @@ use(accessToken: SessionSigsMap): {
 }
 ```
 
-Provides methods to use an access token for various actions.
+The `use` method provides access to various actions that can be performed with an access token. It returns an object containing three methods:
 
-#### toRun
+- **toRun**:
+  - Runs a specific package or IPFS CID. This method allows you to execute custom-built Lit Action code stored in a local repository.
+  - **Parameters**:
+    - `repo`: The local repository of the custom-built Lit Action code.
+    - `params`: Additional parameters required for the specific package.
+- **toExecuteJs**:
 
-Runs a specific package or IPFS CID.
+  - Executes JavaScript code on Lit nodes. This method is useful for running dynamic scripts that interact with the Lit Protocol.
+  - **Parameters**:
+    - `code`: (Optional) The JavaScript code to execute.
+    - `ipfsId`: (Optional) The IPFS ID of the code to execute.
+    - `authMethod`: (Optional) An array of authentication methods to use.
+    - `jsParams`: (Optional) Additional parameters for the JavaScript execution.
 
-#### toExecuteJs
+- **toPkpSign**:
+  - Signs a message using a Programmable Key Pair (PKP). This method is essential for cryptographic operations that require signing.
+  - **Parameters**:
+    - `publicKey`: The public key associated with the PKP.
+    - `message`: The message to be signed, which can be a string or a Uint8Array.
 
-Executes JavaScript code on Lit nodes.
-
-#### toPkpSign
-
-Signs a message using a PKP.
+This structure allows for flexible interaction with the Lit Protocol, enabling developers to run custom actions, execute scripts, and perform cryptographic signing seamlessly.
 
 ## Utility Methods
 
@@ -274,3 +285,131 @@ getTotalExecutionTime(): { ms: number, s: number }
 ```
 
 Retrieves the total execution time of all operations.
+
+## Code Examples
+
+Here are some code examples demonstrating how to use the Bulkie SDK with the `alice` instance.
+
+### Example 1: Connecting to the Lit Node Client
+
+```typescript
+import { ethers } from "ethers";
+import { Bulkie } from "./src/bulkie";
+import { detectedNetwork } from "./dev-utils";
+
+const signer = new ethers.Wallet(process.env.PRIVATE_KEY as string);
+const alice = new Bulkie({
+  guides: true,
+  debug: true,
+  litDebug: false,
+  network: detectedNetwork(),
+  signer: signer,
+});
+
+(async () => {
+  await alice
+    .connectToLitNodeClient()
+    .then((client) => client.connectToLitContracts())
+    .then((client) => {
+      console.log("Connected to Lit Node Client and Contracts");
+    });
+})();
+```
+
+### Example 2: Minting a Programmable Key Pair (PKP)
+
+```typescript
+(async () => {
+  const pkpClient = await alice.mintPKP({
+    selfFund: true,
+    amountInEth: "0.0001",
+  });
+  console.log("PKP Minted:", pkpClient.getOutput("mintPKP"));
+})();
+```
+
+### Example 3: Creating a Credits NFT
+
+```typescript
+(async () => {
+  const creditsNFT = await alice.mintCreditsNFT({
+    requestsPerKilosecond: 200,
+    daysUntilUTCMidnightExpiration: 2,
+  });
+  console.log("Credits NFT Minted:", creditsNFT.getOutput("mintCreditsNFT"));
+})();
+```
+
+### Example 4: Granting an Auth Method to Use PKP
+
+```typescript
+(async () => {
+  await alice.grantAuthMethodToUsePKP({
+    pkpTokenId: alice.getOutput("mintPKP")?.tokenId.hex!,
+    authMethodId: "app-id-xxx:user-id-yyy",
+    authMethodType: 918232,
+    scopes: ["sign_anything"],
+  });
+  console.log("Auth Method Granted to Use PKP");
+})();
+```
+
+### Example 5: Creating an Access Token
+
+```typescript
+const litActionCode = `(async () => {
+  LitActions.setResponse({ response: "true" });  
+})();`;
+
+(async () => {
+  const accessToken = await alice.createAccessToken({
+    type: "custom_auth",
+    pkpPublicKey: alice.getOutput("mintPKP")?.publicKey as `0x${string}`,
+    creditsDelegationToken: alice.getOutput("createCreditsDelegationToken"),
+    resources: [
+      { type: "pkp-signing", request: "*" },
+      { type: "lit-action-execution", request: "*" },
+    ],
+    code: litActionCode,
+    jsParams: {
+      pkpPublicKey: alice.getOutput("mintPKP")?.publicKey as `0x${string}`,
+      rpcUrl: "https://yellowstone-rpc.litprotocol.com",
+      magicNumber: 3,
+    },
+  });
+  console.log("Access Token Created:", accessToken);
+})();
+```
+
+### Example 6: Using the Access Token to Execute JavaScript
+
+```typescript
+(async () => {
+  const accessToken = alice.getOutput("createAccessToken");
+  const litNodeClient = alice.getOutput("connectToLitNodeClient");
+
+  const res = await litNodeClient?.executeJs({
+    sessionSigs: accessToken!,
+    code: `(async () => {
+      console.log("Testing");
+    })();`,
+  });
+
+  console.log("Execution Result:", res);
+})();
+```
+
+### Example 7: Signing a Message with PKP
+
+```typescript
+(async () => {
+  const accessToken = alice.getOutput("createAccessToken");
+  await alice.use(accessToken!).toPkpSign({
+    publicKey: alice.getOutput("mintPKP")?.publicKey!,
+    message: "hello",
+  });
+  console.log("Message Signed with PKP");
+})();
+```
+
+These examples illustrate how to interact with the Bulkie SDK using the `alice` instance for various operations, including connecting to the Lit Node Client, minting PKPs, creating NFTs, and using access tokens.
