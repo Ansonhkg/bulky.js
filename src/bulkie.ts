@@ -1,6 +1,6 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { AuthSig, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
+import { AuthMethod, AuthSig, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, LIT_ABILITY } from '@lit-protocol/constants';
 import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes, OutputHandler } from './types';
@@ -13,6 +13,10 @@ import {
 } from '@lit-protocol/auth-helpers';
 import { BulkieUtils } from './utils';
 import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
+import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
+import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
+import { PKG, PKG_TYPES, PkgParams } from './repo';
+import { VERSION } from './version';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -125,7 +129,9 @@ export class Bulkie {
           })
         );
 
-        return res;
+        this._setOutput(FN.getPkps, res);
+
+        return this;
       },
       []
     );
@@ -150,9 +156,9 @@ export class Bulkie {
     }
   }
 
-  private _debug(message: string) {
+  private _debug(...messages: string[]) {
     if (this.debug) {
-      console.log(`\x1b[90m[bulkie.js] ${message}\x1b[0m`);
+      console.log(`\x1b[90m[bulkie.js ${VERSION}] ${messages.join(' ')}` + `\x1b[0m`);
     }
   }
 
@@ -160,7 +166,6 @@ export class Bulkie {
     const key = outputId ? `${fnName}:${outputId}` : fnName;
     this.outputs.set(key as BulkieSupportedFunctions, output);
   }
-
 
   private async _run<T>(
     opName: string,
@@ -245,6 +250,8 @@ export class Bulkie {
         require.litContracts();
         require.signer();
       case FN.createAccessToken:
+        require.litNodeClient();
+      case FN.toExecuteJs:
         require.litNodeClient();
       default:
     }
@@ -510,7 +517,9 @@ export class Bulkie {
       ]
     )
   }
+
   async createAccessToken(params: {
+    expiration?: string; // ISO string
     pkpPublicKey: HexAddress;
     type: 'custom_auth' | 'native_auth' | 'eoa',
     resources: {
@@ -634,6 +643,7 @@ export class Bulkie {
           }
 
           const sessionSigs = await this.litNodeClient.getLitActionSessionSigs({
+            expiration: params.expiration || new Date(Date.now() + 15 * 60 * 1000).toISOString(),
             pkpPublicKey: _pkpPublicKey,
             resourceAbilityRequests: requestAbilityRequests,
             ...(params.code && !params.ipfsCid
@@ -651,7 +661,7 @@ export class Bulkie {
         }
       },
       [
-        STEP['executeJs'],
+        STEP['toExecuteJs'],
         // STEP['pkpSign']
       ]);
   }
@@ -768,10 +778,205 @@ export class Bulkie {
     )
   }
 
-  async runJs(params: {
-    accessTokens: SessionSigsMap,
+  /**
+   * ========== Using Access Tokens ==========
+   */
+  use(this: Bulkie, accessToken: SessionSigsMap) {
+    const validation = validateSessionSigs(accessToken);
+    if (!validation.isValid) {
+      throw new Error(`Invalid access token: ${validation.errors}`);
+    }
+
+    const formattedSessionSigs = formatSessionSigs(JSON.stringify(accessToken));
+    this._debug(`formattedSessionSigs: ${formattedSessionSigs}`);
+
+    return {
+      toRun: async <T extends PKG_TYPES>(
+        repo: T,
+        params: PkgParams[T] & OutputHandler
+      ) => {
+        return await this._toRun(
+          repo,
+          params,
+          accessToken
+        );
+      },
+      toExecuteJs: async (params: {
+        code?: string,
+        ipfsId?: IPFSCIDv0,
+        authMethod?: AuthMethod[],
+        jsParams?: {
+          [key: string]: any
+        }
+      } & OutputHandler) => await this._executeJs({
+        accessToken: accessToken,
+        ...params
+      }),
+      toPkpSign: async (params: {
+        publicKey: HexAddress,
+        message: string | Uint8Array,
+      } & OutputHandler) => await this._pkpSign({
+        accessToken: accessToken,
+        pkpPublicKey: params.publicKey,
+        message: params.message
+      })
+    }
   }
+
+  private async _generatePrivateKey(
+    params: PkgParams['wrapped-keys/generate-private-key'] & {
+      accessToken: SessionSigsMap
+    } & OutputHandler) {
+
+    return this._run(
+      'Generate Private Key',
+      'wrapped-keys/generate-private-key',
+      async () => {
+        const { pkpAddress, generatedPublicKey, id } = await wrappedKeysApi.generatePrivateKey({
+          pkpSessionSigs: params.accessToken,
+          network: params.chain,
+          litNodeClient: this.litNodeClient as any,
+          memo: params.memo
+        });
+
+        const result = {
+          pkpAddress: pkpAddress as HexAddress,
+          generatedPublicKey,
+          id
+        };
+
+        this._debug(`privateKeyResult: ${JSON.stringify(result)}`);
+
+        this._setOutput('wrapped-keys/generate-private-key', result, params?.outputId);
+
+        return this;
+      },
+      []
+    );
+  }
+
+  // -- native actions
+  private async _executeJs(params: {
+    accessToken: SessionSigsMap,
+    code?: string,
+    ipfsId?: IPFSCIDv0,
+    authMethod?: AuthMethod[],
+    jsParams?: {
+      [key: string]: any
+    },
+  } & OutputHandler
   ) {
 
+    if (!params.accessToken) {
+      throw new Error('accessToken is required');
+    }
+
+    if (params.code && params.ipfsId) {
+      throw new Error('code and ipfsId cannot be both exist at the same time, only one of them is required');
+    }
+
+    if (!params.code && !params.ipfsId) {
+      throw new Error('Either code or ipfsId is required');
+    }
+
+    return this._run(
+      'Run JS',
+      'toExecuteJs',
+      async () => {
+        const res = await this.litNodeClient.executeJs({
+          sessionSigs: params.accessToken,
+          ...(params.code && { code: params.code }),
+          ...(params.ipfsId && { ipfsId: params.ipfsId }),
+          ...(params.authMethod && { authMethod: params.authMethod }),
+          ...(params.jsParams && { jsParams: params.jsParams }),
+        });
+
+        this._debug(`res: ${JSON.stringify(res)}`);
+
+        this._setOutput('toExecuteJs', res, params?.outputId);
+
+        return this;
+      },
+      []
+    );
+  }
+  private async _pkpSign(params: {
+    accessToken: SessionSigsMap,
+    pkpPublicKey: HexAddress,
+    message: string | Uint8Array,
+  } & OutputHandler) {
+
+    let messageBuffer: Uint8Array;
+
+    // The following code checks the type of the message parameter and processes it accordingly.
+    // If the message is a string, it hashes the string using SHA-256 and converts it to a Uint8Array.
+    // If the message is already a Uint8Array, it assigns it directly to messageBuffer.
+    messageBuffer = typeof params.message === 'string'
+      ? new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(params.message)))
+      : params.message;
+
+    this._debug("messageBuffer", messageBuffer.toString());
+
+    return this._run(
+      'Pkp Sign',
+      'toPkpSign',
+      async () => {
+
+        const res = await this.litNodeClient.pkpSign({
+          pubKey: params.pkpPublicKey as HexAddress,
+          toSign: messageBuffer,
+          sessionSigs: params.accessToken
+        });
+
+        this._debug(`res: ${JSON.stringify(res)}`);
+
+        this._setOutput(FN.toPkpSign, res, params?.outputId);
+
+        return this
+      },
+      []
+    )
+  }
+
+  // -- custom actions
+  private async _toRun<T extends PKG_TYPES>(
+    pkg: T,
+    params: PkgParams[T] & OutputHandler,
+    accessToken?: SessionSigsMap
+  ) {
+
+    // -- validate
+    if (!Object.values(PKG).includes(pkg as any) && !pkg.startsWith('Qm')) {
+      throw new Error(`pkg ${pkg} is not supported`);
+    }
+
+    if (pkg === 'wrapped-keys/generate-private-key') {
+      return this._generatePrivateKey({
+        chain: params.chain,
+        memo: params.memo,
+        accessToken: accessToken!
+      });
+    }
+
+    if (pkg.startsWith('Qm')) {
+      return this._run(
+        'Run IPFS CID',
+        `Qm${pkg.slice(1)}`,
+        async () => {
+          const res = await this.litNodeClient.executeJs({
+            sessionSigs: accessToken,
+            ipfsId: pkg,
+            ...(params.jsParams && { jsParams: params.jsParams }),
+          });
+
+          this._debug(`res: ${JSON.stringify(res)}`);
+
+          this._setOutput(pkg, res, params?.outputId);
+
+          return this;
+        },
+        []
+      );
+    }
   }
 }

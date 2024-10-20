@@ -5,7 +5,7 @@ import { FN } from "../types";
 import { LIT_NETWORKS_KEYS } from "@lit-protocol/types";
 
 
-function isEnv(env: 'browser' | 'node'): boolean {
+export function isEnv(env: 'browser' | 'node'): boolean {
   if (env === 'browser' && typeof window !== 'undefined' && typeof window.document !== 'undefined') {
     return true;
   } else if (env === 'node' && typeof process !== 'undefined' && process.versions && process.versions.node) {
@@ -14,7 +14,7 @@ function isEnv(env: 'browser' | 'node'): boolean {
   return false;
 }
 
-const detectedNetwork = () => isEnv('node') && process.env.NETWORK ? process.env.NETWORK : 'datil';
+export const detectedNetwork = () => isEnv('node') && process.env.NETWORK ? process.env.NETWORK : 'datil';
 
 /**
  * Orchestrates the process of connecting to the Lit Node Client,
@@ -33,7 +33,7 @@ export async function grantCustomAuthUserAccessToken() {
   const alice = new Bulkie({
     guides: true,
     debug: true,
-    litDebug: false,
+    litDebug: true,
     network: detectedNetwork() as LIT_NETWORKS_KEYS,
     signer: signer,
   });

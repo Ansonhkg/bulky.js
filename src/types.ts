@@ -1,8 +1,11 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { AuthSig, SessionSigsMap } from '@lit-protocol/types';
+import { AuthMethod, AuthSig, SessionSigsMap } from '@lit-protocol/types';
+import { PkgFns, PkgReturnTypes, PkgSteps } from './repo';
 
-export const FN = {
+
+
+export const GeneralFns = {
   // connections
   'connectToLitNodeClient': 'connectToLitNodeClient',
   'connectToLitContracts': 'connectToLitContracts',
@@ -23,7 +26,13 @@ export const FN = {
   'getPkps': 'getPkps',
 
   // actions
-  'executeJs': 'executeJs'
+  'toExecuteJs': 'toExecuteJs',
+  'toPkpSign': 'toPkpSign',
+} as const;
+
+export const FN = {
+  ...GeneralFns,
+  ...PkgFns,
 } as const;
 
 export const STEP = {
@@ -46,7 +55,9 @@ export const STEP = {
   [FN.getPkps]: `${FN.getPkps} - (to get all PKPs)`,
 
   // actions
-  [FN.executeJs]: `${FN.executeJs} - (to execute a JS code in the Lit Nodes withint a trusted execution environment (TEE) )`
+  [FN.toExecuteJs]: `${FN.toExecuteJs} - (to execute a JS code in the Lit Nodes withint a trusted execution environment (TEE) )`,
+  [FN.toPkpSign]: `${FN.toPkpSign} - (to sign a message with the PKP)`,
+  ...PkgSteps,
 } as const;
 
 export const UNAVAILABLE_STEP = {
@@ -55,14 +66,14 @@ export const UNAVAILABLE_STEP = {
 
 export type STEP_VALUES = (((typeof STEP)[keyof typeof STEP]) | ((typeof UNAVAILABLE_STEP)[keyof typeof UNAVAILABLE_STEP]))[];
 
-export type BulkieSupportedFunctions = keyof typeof FN;
+export type BulkieSupportedFunctions = keyof typeof FN | `Qm${string}`;
 
 export type FunctionReturnTypes = {
   [FN.connectToLitNodeClient]: LitNodeClient;
   [FN.connectToLitContracts]: LitContracts;
   [FN.mintPKP]: {
     tokenId: PKPTokenId;
-    publicKey: string;
+    publicKey: HexAddress;
     ethAddress: HexAddress;
     tx: TX;
   };
@@ -71,19 +82,25 @@ export type FunctionReturnTypes = {
     tokenId: PKPTokenId,
     publicKey: string;
     ethAddress: HexAddress;
-  },
+  }[],
   [FN.grantAuthMethodToUsePKP]: {
     tx: TX;
   },
   [FN.grantIPFSCIDtoUsePKP]: {
     tx: TX;
   },
-  [FN.executeJs]: null,
 
   // Tokens creation
   [FN.createCreditsDelegationToken]: AuthSig,
   [FN.createAccessToken]: SessionSigsMap,
-}
+
+  // Actions
+  [FN.toExecuteJs]: null,
+  [FN.toPkpSign]: {
+    signature: string;
+  },
+  [key: `Qm${string}`]: any;
+} & PkgReturnTypes
 
 interface TX {
   hash: string;
