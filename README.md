@@ -293,9 +293,8 @@ Here are some code examples demonstrating how to use the Bulkie SDK with the `al
 ### Example 1: Connecting to the Lit Node Client
 
 ```typescript
-import { ethers } from "ethers";
+import { ethers } from "ethers"; // 5.7.2
 import { Bulkie } from "./src/bulkie";
-import { detectedNetwork } from "./dev-utils";
 
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY as string);
 const alice = new Bulkie({
@@ -306,52 +305,40 @@ const alice = new Bulkie({
   signer: signer,
 });
 
-(async () => {
-  await alice
-    .connectToLitNodeClient()
-    .then((client) => client.connectToLitContracts())
-    .then((client) => {
-      console.log("Connected to Lit Node Client and Contracts");
-    });
-})();
+await alice.connectToLitNodeClient();
+await alice.connectToLitContracts();
 ```
 
 ### Example 2: Minting a Programmable Key Pair (PKP)
 
 ```typescript
-(async () => {
-  const pkpClient = await alice.mintPKP({
-    selfFund: true,
-    amountInEth: "0.0001",
-  });
-  console.log("PKP Minted:", pkpClient.getOutput("mintPKP"));
-})();
+await alice.mintPKP({
+  selfFund: true,
+  amountInEth: "0.0001",
+});
+console.log("PKP Minted:", alice.getOutput("mintPKP"));
 ```
 
 ### Example 3: Creating a Credits NFT
 
 ```typescript
-(async () => {
-  const creditsNFT = await alice.mintCreditsNFT({
-    requestsPerKilosecond: 200,
-    daysUntilUTCMidnightExpiration: 2,
-  });
-  console.log("Credits NFT Minted:", creditsNFT.getOutput("mintCreditsNFT"));
-})();
+await alice.mintCreditsNFT({
+  requestsPerKilosecond: 200,
+  daysUntilUTCMidnightExpiration: 2,
+});
+console.log("Credits NFT Minted:", alice.getOutput("mintCreditsNFT"));
 ```
 
 ### Example 4: Granting an Auth Method to Use PKP
 
 ```typescript
-(async () => {
-  await alice.grantAuthMethodToUsePKP({
-    pkpTokenId: alice.getOutput("mintPKP")?.tokenId.hex!,
-    authMethodId: "app-id-xxx:user-id-yyy",
-    authMethodType: 918232,
-    scopes: ["sign_anything"],
-  });
-  console.log("Auth Method Granted to Use PKP");
-})();
+await alice.grantAuthMethodToUsePKP({
+  pkpTokenId: alice.getOutput("mintPKP")?.tokenId.hex!,
+  authMethodId: "app-id-xxx:user-id-yyy",
+  authMethodType: 918232,
+  scopes: ["sign_anything"],
+});
+console.log("tx:", alice.getOutput("grantAuthMethodToUsePKP"));
 ```
 
 ### Example 5: Creating an Access Token
@@ -361,55 +348,57 @@ const litActionCode = `(async () => {
   LitActions.setResponse({ response: "true" });  
 })();`;
 
-(async () => {
-  const accessToken = await alice.createAccessToken({
-    type: "custom_auth",
+await alice.createAccessToken({
+  type: "custom_auth",
+  pkpPublicKey: alice.getOutput("mintPKP")?.publicKey as `0x${string}`,
+  creditsDelegationToken: alice.getOutput("createCreditsDelegationToken"),
+  resources: [
+    { type: "pkp-signing", request: "*" },
+    { type: "lit-action-execution", request: "*" },
+  ],
+  code: litActionCode,
+  jsParams: {
     pkpPublicKey: alice.getOutput("mintPKP")?.publicKey as `0x${string}`,
-    creditsDelegationToken: alice.getOutput("createCreditsDelegationToken"),
-    resources: [
-      { type: "pkp-signing", request: "*" },
-      { type: "lit-action-execution", request: "*" },
-    ],
-    code: litActionCode,
-    jsParams: {
-      pkpPublicKey: alice.getOutput("mintPKP")?.publicKey as `0x${string}`,
-      rpcUrl: "https://yellowstone-rpc.litprotocol.com",
-      magicNumber: 3,
-    },
-  });
-  console.log("Access Token Created:", accessToken);
-})();
+    rpcUrl: "https://yellowstone-rpc.litprotocol.com",
+    magicNumber: 3,
+  },
+});
+console.log("accessToken:", alice.getOutput("createAccessToken"));
 ```
 
 ### Example 6: Using the Access Token to Execute JavaScript
 
 ```typescript
-(async () => {
-  const accessToken = alice.getOutput("createAccessToken");
-  const litNodeClient = alice.getOutput("connectToLitNodeClient");
+const accessToken = alice.getOutput("createAccessToken");
 
-  const res = await litNodeClient?.executeJs({
-    sessionSigs: accessToken!,
-    code: `(async () => {
+await alice.use(accessToken!).toExecuteJs({
+  code: `(async () => {
       console.log("Testing");
     })();`,
-  });
+});
 
-  console.log("Execution Result:", res);
-})();
+console.log("Execution Result:", alice.getOutput("toExecuteJs"));
 ```
 
 ### Example 7: Signing a Message with PKP
 
 ```typescript
-(async () => {
-  const accessToken = alice.getOutput("createAccessToken");
-  await alice.use(accessToken!).toPkpSign({
-    publicKey: alice.getOutput("mintPKP")?.publicKey!,
-    message: "hello",
-  });
-  console.log("Message Signed with PKP");
-})();
+const accessToken = alice.getOutput("createAccessToken");
+await alice.use(accessToken!).toPkpSign({
+  publicKey: alice.getOutput("mintPKP")?.publicKey!,
+  message: "hello",
+});
+console.log("Message Signed with PKP:", alice.getOutput("toPkpSign"));
+```
+
+### Example 8: To Run a Custom Lit Action
+
+```typescript
+await alice.use(accessToken!).toRun("wrapped-keys/generate-private-key", {
+  chain: "evm",
+  memo: "hello",
+});
+console.log("Key Info:", alice.getOutput("wrapped-keys/generate-private-key"));
 ```
 
 These examples illustrate how to interact with the Bulkie SDK using the `alice` instance for various operations, including connecting to the Lit Node Client, minting PKPs, creating NFTs, and using access tokens.
