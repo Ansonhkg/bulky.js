@@ -82,7 +82,7 @@ export type FunctionReturnTypes = {
     tokenId: PKPTokenId,
     publicKey: string;
     ethAddress: HexAddress;
-  },
+  }[],
   [FN.grantAuthMethodToUsePKP]: {
     tx: TX;
   },

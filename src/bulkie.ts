@@ -16,6 +16,7 @@ import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
 import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
 import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
 import { PKG, PKG_TYPES, PkgParams } from './repo';
+import { VERSION } from './version';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -155,9 +156,9 @@ export class Bulkie {
     }
   }
 
-  private _debug(message: string) {
+  private _debug(...messages: string[]) {
     if (this.debug) {
-      console.log(`\x1b[90m[bulkie.js] ${message}\x1b[0m`);
+      console.log(`\x1b[90m[bulkie.js ${VERSION}] ${messages.join(' ')}` + `\x1b[0m`);
     }
   }
 
@@ -813,7 +814,7 @@ export class Bulkie {
       }),
       toPkpSign: async (params: {
         publicKey: HexAddress,
-        message: string | Buffer | Uint8Array | number,
+        message: string | Uint8Array,
       } & OutputHandler) => await this._pkpSign({
         accessToken: accessToken,
         pkpPublicKey: params.publicKey,
@@ -902,37 +903,28 @@ export class Bulkie {
   private async _pkpSign(params: {
     accessToken: SessionSigsMap,
     pkpPublicKey: HexAddress,
-    message: string | Buffer | Uint8Array | number,
+    message: string | Uint8Array,
   } & OutputHandler) {
-    // Convert message to Uint8Array if it's not already a Buffer or Uint8Array
+
     let messageBuffer: Uint8Array;
 
-    if (Buffer.isBuffer(params.message)) {
-      messageBuffer = new Uint8Array(params.message);
-    } else if (typeof params.message === 'string') {
-      const encoder = new TextEncoder();
-      messageBuffer = encoder.encode(params.message);
-    } else if (typeof params.message === 'number') {
-      messageBuffer = new Uint8Array(new Uint32Array([params.message]).buffer);
-    } else {
-      messageBuffer = new Uint8Array(params.message);
-    }
+    // The following code checks the type of the message parameter and processes it accordingly.
+    // If the message is a string, it hashes the string using SHA-256 and converts it to a Uint8Array.
+    // If the message is already a Uint8Array, it assigns it directly to messageBuffer.
+    messageBuffer = typeof params.message === 'string'
+      ? new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(params.message)))
+      : params.message;
 
-    // If in a Node.js environment or functions expecting Buffer, convert the Uint8Array to Buffer
-    const bufferForKeccak = Buffer.from(messageBuffer);
-
-    const bufferHashMessage = ethers.utils.arrayify(ethers.utils.keccak256(bufferForKeccak));
-
-
-    this._debug(`bufferHashMessage: ${bufferHashMessage}`);
+    this._debug("messageBuffer", messageBuffer.toString());
 
     return this._run(
       'Pkp Sign',
       'toPkpSign',
       async () => {
+
         const res = await this.litNodeClient.pkpSign({
           pubKey: params.pkpPublicKey as HexAddress,
-          toSign: bufferHashMessage,
+          toSign: messageBuffer,
           sessionSigs: params.accessToken
         });
 
