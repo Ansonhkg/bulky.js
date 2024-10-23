@@ -72,10 +72,14 @@ namespace Helper {
     name: 'db-bro'
   }, async () => {
     if (params.operation === 'register') {
+
       // The PKP owns the encrypted private key
       const privateKeyOwnerAddress = ethers.utils.computeAddress(params.pkpPublicKey);
+
+      // The PKP address is set as the access control condition
       const { publicData, privateData } = await genEncryptedPrivateKey(privateKeyOwnerAddress);
 
+      // We then write to the OrbisDB table in the columns 'owner' and 'metadata'.
       const { id } = await handleDB({
         privateKey: privateData.privateKey,
         operation: "write",
@@ -92,52 +96,73 @@ namespace Helper {
       });
     }
 
-    if (params.operation === 'read') {
+    if (params.operation === 'read' || params.operation === 'use') {
       const allMetadata = await Helper.getStoredMetadata();
       return JSON.stringify(allMetadata);
     }
 
-    if (params.operation === 'use') {
-      const allMetadata = await Helper.getStoredMetadata();
-      const selectedMetadata = allMetadata.find((metadata) => metadata.address === (params as KeyUseParams).address);
-      return JSON.stringify(selectedMetadata);
-    }
+    // if (params.operation === 'use') {
+    //   const allMetadata = await Helper.getStoredMetadata();
+    //   const selectedMetadata = allMetadata.find((metadata) => metadata.address === (params as KeyUseParams).address);
+    //   return JSON.stringify(selectedMetadata);
+    // }
   });
 
   // Whe 'use' - we will decrypt the private key and use it to 
   // perform different actions
   if (params.operation === 'use') {
-    const _data = JSON.parse(res);
+
+    let allMetadata = JSON.parse(res);
+    const selectedMetadata = allMetadata.find((metadata) => metadata.address === (params as KeyUseParams).address);
+
     const decryptRes = await Lit.Actions.decryptAndCombine({
-      accessControlConditions: _data.accs,
-      ciphertext: _data.ciphertext,
-      dataToEncryptHash: _data.dataToEncryptHash,
+      accessControlConditions: selectedMetadata.accs,
+      ciphertext: selectedMetadata.ciphertext,
+      dataToEncryptHash: selectedMetadata.dataToEncryptHash,
       chain: 'ethereum',
       authSig: null, // <-- Signed by the PKP on Lit Action, that's why is null.
     });
 
-    const privateKey = decryptRes.replace('lit_', '');
-    const address = ethers.utils.computeAddress(privateKey);
+    const DONT_EXPORT_THIS_privateKey = decryptRes.replace('lit_', '');
 
-    const wallet = new ethers.Wallet(privateKey);
-    const signature = await wallet.signMessage('TESTING');
+    const wallet = new ethers.Wallet(DONT_EXPORT_THIS_privateKey);
+    const signedMessage = 'HAKUNA MATATA';
+    const signature = await wallet.signMessage(signedMessage);
 
     Lit.Actions.setResponse({
       response: JSON.stringify({
         success: true,
         message: {
-          address,
-          signature
-        }
+          address: wallet.address,
+          signature,
+          signedMessage
+        },
       })
     });
-    return;
+
+    // const _data = res
+    // const decryptRes = await Lit.Actions.decryptToSingleNode({
+    //   accessControlConditions: res.accs,
+    //   ciphertext: res.ciphertext,
+    //   dataToEncryptHash: res.dataToEncryptHash,
+    //   chain: 'ethereum',
+    //   authSig: null, // <-- Signed by the PKP on Lit Action, that's why is null.
+    // });
+
+    // const privateKey = decryptRes.replace('lit_', '');
+    // const address = ethers.utils.computeAddress(privateKey);
+
+    // const wallet = new ethers.Wallet(privateKey);
+    // const signature = await wallet.signMessage('TESTING');
+
+
+  } else {
+    Lit.Actions.setResponse({
+      response: JSON.stringify({
+        success: true,
+        message: res,
+      })
+    });
   }
 
-  Lit.Actions.setResponse({
-    response: JSON.stringify({
-      success: true,
-      message: res,
-    })
-  });
 })();

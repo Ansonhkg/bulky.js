@@ -16,7 +16,7 @@ import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
 import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
 import { PKG, PKG_TYPES, PkgParams } from './plugins/plugins';
 import { VERSION } from './version';
-import { createKeyReadParams, getKeyManagementLitAction } from './plugins/orbisdb';
+import { createKeyReadParams, createKeyRegisterParams, createKeyUseParams, getKeyManagementLitAction } from './plugins/orbisdb';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -966,6 +966,39 @@ export class Bulkie {
       });
     }
 
+    if (pkg === 'orbisdb/key-management/register') {
+      return this._run(
+        'Register encrypted private key',
+        'orbisdb/key-management/register',
+        async () => {
+          const code = getKeyManagementLitAction();
+          const jsParams = createKeyRegisterParams(params.pkpPublicKey);
+          const res = await this.litNodeClient.executeJs({
+            sessionSigs: accessToken!,
+            code: code,
+            jsParams: {
+              params: jsParams
+            }
+          });
+
+          if (!res.success) {
+            throw new Error(`Failed to register encrypted private key: ${JSON.stringify(res)}`);
+          }
+
+          const parsedRes = typeof res.response === 'string' ?
+            JSON.parse(JSON.parse(res.response).message) :
+            res.response;
+
+          this._debug(`parsedRes: ${JSON.stringify(parsedRes)}`);
+
+          this._setOutput(pkg, parsedRes, params?.outputId);
+
+          return this;
+        },
+        []
+      )
+    }
+
     if (pkg === 'orbisdb/key-management/read') {
       return this._run(
         'Read all encrypted keys metadata',
@@ -998,6 +1031,44 @@ export class Bulkie {
         []
       );
     }
+
+    if (pkg === 'orbisdb/key-management/use') {
+      return this._run(
+        'Use encrypted private key',
+        'orbisdb/key-management/use',
+        async () => {
+
+          const code = getKeyManagementLitAction();
+          const jsParams = createKeyUseParams(
+            params.pkpPublicKey,
+            params.encryptedAddress
+          );
+
+          const res = await this.litNodeClient.executeJs({
+            sessionSigs: accessToken!,
+            code: code,
+            jsParams: {
+              params: jsParams
+            }
+          });
+
+          if (!res.success) {
+            throw new Error(`❌ Failed to use encrypted private key: ${JSON.stringify(res)}`);
+          }
+
+          const parsedRes = typeof res.response === 'string' ?
+            JSON.parse(res.response).message :
+            res.response;
+
+          this._setOutput(pkg, parsedRes, params?.outputId);
+
+          return this;
+        },
+        []
+      )
+    }
+
+
 
     if (pkg.startsWith('Qm')) {
       return this._run(
