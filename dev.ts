@@ -81,37 +81,6 @@ import { KeyManagementParams, KeyReadParams, KeyRegisterParams, KeyUpdateParams,
 
   // --------- access token usage ---------
 
-  // const keyRegisterParams: KeyRegisterParams = {
-  //   pkpPublicKey: mintPKP.publicKey,
-  //   operation: 'register',
-  // }
-
-  // const keyReadParams: KeyReadParams = {
-  //   pkpPublicKey: mintPKP.publicKey,
-  //   operation: 'read',
-  // }
-
-  // const keyUseParams: KeyUseParams = {
-  //   pkpPublicKey: mintPKP.publicKey,
-  //   operation: 'use',
-  //   address: '0x2ef1848d83D8C7B229E5231ED61f802106AD8261',
-  // }
-
-  // const keyUpdateParams: KeyUpdateParams = {
-  //   pkpPublicKey: mintPKP.publicKey,
-  //   operation: 'update',
-  //   docId: 'kjzl6kcym7w8y7ifdzhu1qzl2qua7euo8cz6vxt43autokch60pv740izng9p97',
-  //   data: 'hello',
-  // }
-
-  // Use the correct param type here
-  // const params: KeyManagementParams = keyUseParams;
-
-  // await alice.use(accessToken).toExecuteJs({
-  //   code: ladbCode,
-  //   jsParams: { params }
-  // });
-
   await alice.use(accessToken).toRun('orbisdb/key-management/read', {
     pkpPublicKey: mintPKP.publicKey
   });
