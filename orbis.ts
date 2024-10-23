@@ -32,6 +32,7 @@ const db = new OrbisDB({
 
 const signer = new ethers.Wallet(PRIVATE_KEY);
 
+// @ts-ignore
 const auth = new OrbisEVMAuth(signer)
 
 const authResult = await db.connectUser({ auth, saveSession: false })

@@ -21,13 +21,11 @@ export class DB {
   private _db: OrbisDB;
   private _privateKey: string;
   private _wallet: typeof ethers.Wallet;
-  private _address: string;
 
   constructor(privateKey: string) {
 
     this._privateKey = privateKey;
     this._wallet = new ethers.Wallet(this._privateKey);
-    this._address = this._wallet.address;
 
     this._db = new OrbisDB({
       ceramic: {

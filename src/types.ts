@@ -1,7 +1,7 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { AuthMethod, AuthSig, SessionSigsMap } from '@lit-protocol/types';
-import { PkgFns, PkgReturnTypes, PkgSteps } from './repo';
+import { PKG, PkgReturnTypes, PkgSteps } from './plugins/plugins';
 
 
 
@@ -32,7 +32,7 @@ export const GeneralFns = {
 
 export const FN = {
   ...GeneralFns,
-  ...PkgFns,
+  ...PKG,
 } as const;
 
 export const STEP = {

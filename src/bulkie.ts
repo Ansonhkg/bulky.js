@@ -14,8 +14,9 @@ import { BulkieUtils } from './utils';
 import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
 import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
 import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
-import { PKG, PKG_TYPES, PkgParams } from './repo';
+import { PKG, PKG_TYPES, PkgParams } from './plugins/plugins';
 import { VERSION } from './version';
+import { createKeyReadParams, getKeyManagementLitAction } from './plugins/orbisdb';
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -794,6 +795,9 @@ export class Bulkie {
         repo: T,
         params: PkgParams[T] & OutputHandler
       ) => {
+
+        // const _params = params as PkgParams[T] & OutputHandler;
+
         return await this._toRun(
           repo,
           params,
@@ -937,12 +941,17 @@ export class Bulkie {
     )
   }
 
-  // -- custom actions
+  // -- custom/plugin actions
   private async _toRun<T extends PKG_TYPES>(
     pkg: T,
     params: PkgParams[T] & OutputHandler,
     accessToken?: SessionSigsMap
   ) {
+
+    // TODO: How do we get the PKPInfo from an ETH address?
+    // We need to get ALL pkps owned by the ETH address,
+    // Convert all PKPs to tokenIds, then public keys, then ETH address
+    // and finally compare the ETH address with the one in the params
 
     // -- validate
     if (!Object.values(PKG).includes(pkg as any) && !pkg.startsWith('Qm')) {
@@ -955,6 +964,39 @@ export class Bulkie {
         memo: params.memo,
         accessToken: accessToken!
       });
+    }
+
+    if (pkg === 'orbisdb/key-management/read') {
+      return this._run(
+        'Read all encrypted keys metadata',
+        'orbisdb/key-management/read',
+        async () => {
+          const code = getKeyManagementLitAction();
+          const jsParams = createKeyReadParams(params.pkpPublicKey);
+          const res = await this.litNodeClient.executeJs({
+            sessionSigs: accessToken!,
+            code: code,
+            jsParams: {
+              params: jsParams
+            }
+          });
+
+          if (!res.success) {
+            throw new Error(`Failed to read keys: ${JSON.stringify(res)}`);
+          }
+
+          const parsedRes = typeof res.response === 'string' ?
+            JSON.parse(JSON.parse(res.response).message) :
+            res.response;
+
+          this._debug(`parsedRes: ${JSON.stringify(parsedRes)}`);
+
+          this._setOutput(pkg, parsedRes, params?.outputId);
+
+          return this;
+        },
+        []
+      );
     }
 
     if (pkg.startsWith('Qm')) {

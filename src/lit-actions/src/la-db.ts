@@ -2,26 +2,30 @@ import { handleDB } from "./sdk-orbis";
 import { genEncryptedPrivateKey } from "./util";
 
 // --------- Global Variables ---------
-export type KeyManagementParams = KeyRegisterParams | KeyReadParams | KeyUseParams | KeyUpdateParams;
+export type KeyManagementParams =
+  KeyRegisterParams |
+  KeyReadParams |
+  KeyUseParams |
+  KeyUpdateParams;
 
-export type KeyRegisterParams = {
-  pkpPublicKey: string;
+export interface BaseJsParams {
+  pkpPublicKey: `0x${string}` | string;
+}
+
+export type KeyRegisterParams = BaseJsParams & {
   operation: 'register';
 }
 
-export type KeyReadParams = {
-  pkpPublicKey: string;
+export type KeyReadParams = BaseJsParams & {
   operation: 'read';
 }
 
-export type KeyUseParams = {
-  pkpPublicKey: string;
+export type KeyUseParams = BaseJsParams & {
   operation: 'use';
   address: string;
 }
 
-export type KeyUpdateParams = {
-  pkpPublicKey: string;
+export type KeyUpdateParams = BaseJsParams & {
   operation: 'update';
   docId: string;
   data: JSON | string;
