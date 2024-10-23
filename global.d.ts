@@ -277,7 +277,7 @@ declare global {
         dataToEncryptHash,
         authSig,
         chain,
-      }: string): string;
+      }: any): Promise<string>;
       /**
    * Decrypt to a single node.
    * @param {string} accessControlConditions The access control conditions

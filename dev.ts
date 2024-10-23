@@ -8,7 +8,7 @@ import { BulkieUtils } from "./src/utils";
 import { code, code as foocode } from "./src/lit-actions/dist/foo";
 import { code as ladbCode } from "./src/lit-actions/dist/la-db";
 import fs from 'fs';
-import { KeyManagementParams, KeyReadParams, KeyRegisterParams, KeyUpdateParams } from "./src/lit-actions/src/la-db";
+import { KeyManagementParams, KeyReadParams, KeyRegisterParams, KeyUpdateParams, KeyUseParams } from "./src/lit-actions/src/la-db";
 
 (async () => {
   // await grantCustomAuthUserAccessToken();
@@ -91,6 +91,12 @@ import { KeyManagementParams, KeyReadParams, KeyRegisterParams, KeyUpdateParams 
     operation: 'read',
   }
 
+  const keyUseParams: KeyUseParams = {
+    pkpPublicKey: mintPKP.publicKey,
+    operation: 'use',
+    address: '0x2ef1848d83D8C7B229E5231ED61f802106AD8261',
+  }
+
   const keyUpdateParams: KeyUpdateParams = {
     pkpPublicKey: mintPKP.publicKey,
     operation: 'update',
@@ -99,7 +105,7 @@ import { KeyManagementParams, KeyReadParams, KeyRegisterParams, KeyUpdateParams 
   }
 
   // Use the correct param type here
-  const params: KeyManagementParams = keyReadParams;
+  const params: KeyManagementParams = keyUseParams;
 
   await alice.use(accessToken).toExecuteJs({
     code: ladbCode,
@@ -112,12 +118,16 @@ import { KeyManagementParams, KeyReadParams, KeyRegisterParams, KeyUpdateParams 
     return JSON.parse(JSON.parse(res?.response!).message);
   }
 
+  // const res2 = JSON.parse(res.response);
+  // const verified = ethers.utils.verifyMessage("TESTING", res2.message.signature);
+  // console.log("verified:", verified);
+
   // { "ciphertext": "k1LNkhL/g8gAFs4O3adPHFIhxFlHiSl1bSWtBwB9gPeCUpOjybP8jw1FetqZ8l92Az2A4c4iv1ilXX2dW7KACNxFtgpUqAkUM03WKbFyAu5Hio9eejJbX8Y4H36RYDa2PeOJrSJ33AeTP5hQd+v/lOwnwzg9wyYSVTaT5x4PLXcOGIWBcr8tVOvuvBbehvaD6D7UCT6PfCAC", "dataToEncryptHash": "f96dd4a84f1c223f213032325f0e8de51dcc5085fff65606b8a475dd3e365b7f", "keyType": "K256", "publicKey": "0x0431e5ab51e9b721bdbfe957aac2b94d31ef3a58c4a9c929283cbf3518f3dc63be68b10133c34a43b2403d290d9cc5b31df8f52e26872e3c484fafc6b7fb793bec", "accs": [{ "contractAddress": "", "standardContractType": "", "chain": "ethereum", "method": "", "parameters": [":userAddress"], "returnValueTest": { "comparator": "=", "value": "0x3A2654A300F8EA574F59630b510d9D5609b10D5B" } }] }
 
   // const message = parseDBResponse(res);
-  const message = parseResponse(res);
+  // const message = parseResponse(res);
   // console.log("toExecuteJs:", alice.getOutput('toExecuteJs'));
-  console.log("message:", message);
+  console.log("res:", res);
   process.exit();
   // await alice.use(accessToken!).toPkpSign({
   //   publicKey: alice.getOutput('mintPKP')?.publicKey!,
