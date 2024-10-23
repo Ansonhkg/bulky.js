@@ -7,10 +7,15 @@
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
     "noImplicitAny": false,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "types": [
+      "./global.d.ts"
+    ]
   },
   "include": [
     "./src/index.ts",
+    "./src/lit-actions/src/foo.ts",
+    "./src/lit-actions/**/*.ts",
     "./global.d.ts"
   ]
 }

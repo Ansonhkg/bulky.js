@@ -5,7 +5,10 @@ import { Bulkie } from "./src/bulkie";
 import { detectedNetwork } from "./dev-utils";
 import { LIT_NETWORKS_KEYS } from "@lit-protocol/types";
 import { BulkieUtils } from "./src/utils";
-import { code as foocode } from "./src/lit-actions/dist/foo";
+import { code, code as foocode } from "./src/lit-actions/dist/foo";
+import { code as ladbCode } from "./src/lit-actions/dist/la-db";
+import fs from 'fs';
+import { KeyManagementParams, KeyReadParams, KeyRegisterParams, KeyUpdateParams } from "./src/lit-actions/src/la-db";
 
 (async () => {
   // await grantCustomAuthUserAccessToken();
@@ -23,73 +26,105 @@ import { code as foocode } from "./src/lit-actions/dist/foo";
 
   await alice.connectToLitNodeClient()
     .then((client) => client.connectToLitContracts())
-    .then((client) => client.mintPKP({ selfFund: true, amountInEth: "0.0001" }))
-    .then((client) => client.mintCreditsNFT({
-      requestsPerKilosecond: 200,
-      daysUntilUTCMidnightExpiration: 2
-    }))
-    .then((client) => client.createCreditsDelegationToken({
-      creditsTokenId: client.getOutput('mintCreditsNFT')!
-    }))
-    .then((client) => client.grantAuthMethodToUsePKP({
-      pkpTokenId: client.getOutput('mintPKP')?.tokenId.hex!,
-      authMethodId: 'app-id-xxx:user-id-yyy',
-      authMethodType: 918232,
-      scopes: ['sign_anything']
-    }));
+  //   .then((client) => client.mintPKP({ selfFund: true, amountInEth: "0.0001" }))
+  //   .then((client) => client.mintCreditsNFT({
+  //     requestsPerKilosecond: 200,
+  //     daysUntilUTCMidnightExpiration: 2
+  //   }))
+  //   .then((client) => client.createCreditsDelegationToken({
+  //     creditsTokenId: client.getOutput('mintCreditsNFT')!
+  //   }))
+  //   .then((client) => client.grantAuthMethodToUsePKP({
+  //     pkpTokenId: client.getOutput('mintPKP')?.tokenId.hex!,
+  //     authMethodId: 'app-id-xxx:user-id-yyy',
+  //     authMethodType: 918232,
+  //     scopes: ['sign_anything']
+  //   }));
 
-  const litActionCode = `(async () => {
-    LitActions.setResponse({ response: "true" });  
-  })();`;
+  // const litActionCode = `(async () => {
+  //   LitActions.setResponse({ response: "true" });  
+  // })();`;
 
-  const ipfsCid = await BulkieUtils.strToIPFSHash(litActionCode);
+  // const ipfsCid = await BulkieUtils.strToIPFSHash(litActionCode);
 
-  await alice.grantIPFSCIDtoUsePKP({
-    pkpTokenId: alice.getOutput('mintPKP')?.tokenId.hex!,
-    ipfsCid: ipfsCid,
-    scopes: ['sign_anything']
-  });
+  // await alice.grantIPFSCIDtoUsePKP({
+  //   pkpTokenId: alice.getOutput('mintPKP')?.tokenId.hex!,
+  //   ipfsCid: ipfsCid,
+  //   scopes: ['sign_anything']
+  // });
 
-  await alice.createAccessToken({
-    type: 'custom_auth',
-    pkpPublicKey: alice.getOutput('mintPKP')?.publicKey as `0x${string}`,
-    creditsDelegationToken: alice.getOutput('createCreditsDelegationToken'),
-    resources: [
-      { type: 'pkp-signing', request: '*' },
-      { type: 'lit-action-execution', request: '*' },
-    ],
-    code: litActionCode,
-    jsParams: {
-      pkpPublicKey: alice.getOutput('mintPKP')?.publicKey as `0x${string}`,
-      rpcUrl: 'https://yellowstone-rpc.litprotocol.com',
-      magicNumber: 3,
-    },
-  });
+  // await alice.createAccessToken({
+  //   // expires in 7 days
+  //   expiration: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  //   type: 'custom_auth',
+  //   pkpPublicKey: alice.getOutput('mintPKP')?.publicKey as `0x${string}`,
+  //   creditsDelegationToken: alice.getOutput('createCreditsDelegationToken'),
+  //   resources: [
+  //     { type: 'pkp-signing', request: '*' },
+  //     { type: 'lit-action-execution', request: '*' },
+  //   ],
+  //   code: litActionCode,
+  //   jsParams: {
+  //     pkpPublicKey: alice.getOutput('mintPKP')?.publicKey as `0x${string}`,
+  //     rpcUrl: 'https://yellowstone-rpc.litprotocol.com',
+  //     magicNumber: 3,
+  //   },
+  // });
 
-  const accessToken = alice.getOutput('createAccessToken');
-
-  // write the access token to a file
-  // const fs = require('fs');
-  // fs.writeFileSync('accessToken.json', JSON.stringify(accessToken, null, 2));
-
-  // read the access token from the file and parse it as a JSON object
-  // const accessToken = JSON.parse(fs.readFileSync('accessToken.json', 'utf8'));
+  // ----- Persist data
+  // fs.writeFileSync('mintPKP.json', JSON.stringify(alice.getOutput('mintPKP'), null, 2));
+  // fs.writeFileSync('accessToken.json', JSON.stringify(alice.getOutput('createAccessToken'), null, 2));
+  // process.exit();
+  // ----- Use persisted data
+  const accessToken = JSON.parse(fs.readFileSync('accessToken.json', 'utf8'));
+  const mintPKP = JSON.parse(fs.readFileSync('mintPKP.json', 'utf8'));
 
   // --------- access token usage ---------
-  // await alice.use(accessToken!).toExecuteJs({
-  //   code: `(async()=> { console.log("MAGIC NUMBER:", magicNumber) })();`,
-  //   jsParams: {
-  //     magicNumber: 3,
-  //   }
-  // })
-  // console.log("toExecuteJs:", alice.getOutput('toExecuteJs'));
 
-  await alice.use(accessToken!).toPkpSign({
-    publicKey: alice.getOutput('mintPKP')?.publicKey!,
-    message: 'hello',
+  const keyRegisterParams: KeyRegisterParams = {
+    pkpPublicKey: mintPKP.publicKey,
+    operation: 'register',
+  }
+
+  const keyReadParams: KeyReadParams = {
+    pkpPublicKey: mintPKP.publicKey,
+    operation: 'read',
+  }
+
+  const keyUpdateParams: KeyUpdateParams = {
+    pkpPublicKey: mintPKP.publicKey,
+    operation: 'update',
+    docId: 'kjzl6kcym7w8y7ifdzhu1qzl2qua7euo8cz6vxt43autokch60pv740izng9p97',
+    data: 'hello',
+  }
+
+  // Use the correct param type here
+  const params: KeyManagementParams = keyReadParams;
+
+  await alice.use(accessToken).toExecuteJs({
+    code: ladbCode,
+    jsParams: { params }
   })
 
-  console.log("toPkpSign:", alice.getOutput('toPkpSign'));
+  const res: any = alice.getOutput('toExecuteJs');
+
+  function parseResponse(res: any) {
+    return JSON.parse(JSON.parse(res?.response!).message);
+  }
+
+  // { "ciphertext": "k1LNkhL/g8gAFs4O3adPHFIhxFlHiSl1bSWtBwB9gPeCUpOjybP8jw1FetqZ8l92Az2A4c4iv1ilXX2dW7KACNxFtgpUqAkUM03WKbFyAu5Hio9eejJbX8Y4H36RYDa2PeOJrSJ33AeTP5hQd+v/lOwnwzg9wyYSVTaT5x4PLXcOGIWBcr8tVOvuvBbehvaD6D7UCT6PfCAC", "dataToEncryptHash": "f96dd4a84f1c223f213032325f0e8de51dcc5085fff65606b8a475dd3e365b7f", "keyType": "K256", "publicKey": "0x0431e5ab51e9b721bdbfe957aac2b94d31ef3a58c4a9c929283cbf3518f3dc63be68b10133c34a43b2403d290d9cc5b31df8f52e26872e3c484fafc6b7fb793bec", "accs": [{ "contractAddress": "", "standardContractType": "", "chain": "ethereum", "method": "", "parameters": [":userAddress"], "returnValueTest": { "comparator": "=", "value": "0x3A2654A300F8EA574F59630b510d9D5609b10D5B" } }] }
+
+  // const message = parseDBResponse(res);
+  const message = parseResponse(res);
+  // console.log("toExecuteJs:", alice.getOutput('toExecuteJs'));
+  console.log("message:", message);
+  process.exit();
+  // await alice.use(accessToken!).toPkpSign({
+  //   publicKey: alice.getOutput('mintPKP')?.publicKey!,
+  //   message: 'hello',
+  // })
+
+  // console.log("toPkpSign:", alice.getOutput('toPkpSign'));
 
   // await alice.use(accessToken!).toRun('wrapped-keys/generate-private-key', {
   //   chain: 'evm',
@@ -102,11 +137,15 @@ import { code as foocode } from "./src/lit-actions/dist/foo";
 
   // console.log(alice.getOutput("QmZZ6Zqfo7hCLXzGZQUzSxCRvg3G6qFFWSQT4rqfnCDxti"))
 
-  await alice.use(accessToken!).toRun('wrapped-keys/generate-private-key', {
-    chain: 'solana',
-    memo: 'solana-memo'
-  });
+  // await alice.use(accessToken!).toRun('wrapped-keys/generate-private-key', {
+  //   chain: 'solana',
+  //   memo: 'solana-memo'
+  // });
 
-  console.log(alice.getOutput('wrapped-keys/generate-private-key'));
+  // console.log(alice.getOutput('wrapped-keys/generate-private-key'));
+
+  // --------- External Integrations ---------
+  // alice.usePlugin('db')
+
 
 })();

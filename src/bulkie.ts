@@ -5,7 +5,6 @@ import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, LIT_ABILITY } from '@lit-protocol/constants';
 import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes, OutputHandler } from './types';
 import {
-
   LitActionResource,
   LitPKPResource,
   LitAccessControlConditionResource,

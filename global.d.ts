@@ -325,20 +325,20 @@ declare global {
       function getRpcUrl({ chain }: { chain: string }): Promise<string>;
       /**
        *
-       * @param {string} accessControlConditions  The access control conditions
-       * @param {string} to_encrypt The message to encrypt
+       * @param {Object[]} accessControlConditions  The access control conditions
+       * @param {Uint8Array} to_encrypt The message to encrypt
        * @returns { {ciphertext: string, dataToEncryptHash: string} } Contains two items: The ciphertext result after encryption, named "ciphertext" and the dataToEncryptHash, named "dataToEncryptHash"
        */
       function encrypt({
         accessControlConditions,
         to_encrypt,
       }: {
-        accessControlConditions: string;
+        accessControlConditions: Object[];
         to_encrypt: Uint8Array;
-      }): {
+      }): Promise<{
         ciphertext: string;
         dataToEncryptHash: string;
-      };
+      }>
     }
 
     export namespace Auth {
@@ -381,6 +381,11 @@ declare global {
       const customAuthResource: string | `"\\(true,${string})\\"`;
     }
   }
+  // eslint-disable-next-line import/export
+  export type ethers = Ethers;
+  export const ethers: typeof Ethers;
 }
 
-export {};
+global.ethers = Ethers;
+
+export { };

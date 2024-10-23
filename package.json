@@ -1,6 +1,6 @@
 {
   "name": "bulkie.js",
-  "version": "0.0.27",
+  "version": "0.0.28",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
@@ -25,20 +25,28 @@
     "dist"
   ],
   "dependencies": {
+    "@useorbis/db-sdk": "0.0.60-alpha",
+    "ethers": "5.7.2",
+    "typestub-ipfs-only-hash": "^4.0.0"
+  },
+  "peerDependencies": {
+    "@lit-protocol/accs-schemas": "^0.0.15",
+    "@lit-protocol/constants": "^7.0.0-alpha.6",
+    "@lit-protocol/contracts-sdk": "^7.0.0-alpha.6",
+    "@lit-protocol/lit-node-client": "^7.0.0-alpha.6",
+    "@lit-protocol/types": "^7.0.0-alpha.6",
+    "@lit-protocol/wrapped-keys": "^6.11.0"
+  },
+  "engines": {
+    "bun": ">=0.6.0"
+  },
+  "devDependencies": {
     "@lit-protocol/accs-schemas": "0.0.15",
     "@lit-protocol/constants": "7.0.0-alpha.6",
     "@lit-protocol/contracts-sdk": "7.0.0-alpha.6",
     "@lit-protocol/lit-node-client": "7.0.0-alpha.6",
     "@lit-protocol/types": "7.0.0-alpha.6",
     "@lit-protocol/wrapped-keys": "^6.11.0",
-    "@tableland/sdk": "^7.2.1",
-    "ethers": "5.7.2",
-    "typestub-ipfs-only-hash": "^4.0.0"
-  },
-  "engines": {
-    "bun": ">=0.6.0"
-  },
-  "devDependencies": {
     "@types/jszip": "^3.4.0",
     "esbuild": "^0.24.0"
   }

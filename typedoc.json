@@ -1,0 +1,12 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "./src/index.ts",
+    "./src/bulkie.ts",
+    "./src/types.ts",
+    "./src/repo.ts",
+    "./src/utils.ts"
+  ],
+  "out": "doc",
+  "skipErrorChecking": true
+}

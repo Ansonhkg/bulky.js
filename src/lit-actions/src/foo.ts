@@ -22,11 +22,14 @@ declare global {
   });
 
   console.log(`Hakuna Matata, ya magic number ist: ${magicNumber}`);
+  console.log(globalThis.crypto);
 
   Lit.Actions.setResponse({
     response: JSON.stringify({
       success: true,
-      message: res,
+      message: {
+        res,
+      },
     })
   });
 })();
