@@ -8,6 +8,7 @@
     "skipLibCheck": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
+    "allowJs": true,
     "types": [
       "./global.d.ts"
     ]
@@ -16,6 +17,8 @@
     "./src/index.ts",
     "./src/lit-actions/src/foo.ts",
     "./src/lit-actions/**/*.ts",
-    "./global.d.ts"
-  ]
+    "./src/lit-actions/dist/*.js",
+    "./global.d.ts",
+    "src/**/*",
+  ],
 }
