@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulkie SDK Test</title>
+</head>
+
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"
+    type="application/javascript"></script>
+  <script src="./dist/bulkie.min.js"></script>
+
+  <button id="go">Go</button>
+
+  <script>
+
+    document.getElementById('go').addEventListener('click', go);
+
+    async function go() {
+      try {
+        // Initialize provider
+        const yellowstoneChain = {
+          contractAddress: null,
+          chainId: 175188,
+          name: 'Chronicle Yellowstone - Lit Protocol Testnet',
+          symbol: 'tstLPX',
+          decimals: 18,
+          rpcUrls: ['https://yellowstone-rpc.litprotocol.com/'],
+          blockExplorerUrls: ['https://yellowstone-explorer.litprotocol.com/'],
+          type: null,
+          vmType: 'EVM',
+        };
+
+        const provider = new ethers.providers.Web3Provider((window).ethereum);
+        await provider.send("eth_requestAccounts", []);
+
+        // Check current network and switch if necessary
+        const network = await provider.getNetwork();
+        if (network.chainId !== yellowstoneChain.chainId) {
+          try {
+            await provider.send("wallet_switchEthereumChain", [{ chainId: ethers.utils.hexValue(yellowstoneChain.chainId) }]);
+          } catch (switchError) {
+            // This error code indicates that the chain has not been added to MetaMask
+            if (switchError.code === 4902) {
+              await provider.send("wallet_addEthereumChain", [yellowstoneChain]);
+            } else {
+              throw switchError;
+            }
+          }
+        }
+        // Request account access
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+        // Initialize the SDK with provider
+        const alice = new window.Bulkie({
+          debug: true,
+          litDebug: true,
+          guides: true,
+          signer: provider.getSigner(),
+          network: 'datil',
+        });
+
+        console.log('Bulkie SDK initialized:', alice);
+
+        await alice.connectToLitNodeClient()
+          .then((client) => client.connectToLitContracts())
+          .then((client) => client.mintPKP({ selfFund: true, amountInEth: "0.0001" }))
+          .then((client) => client.mintCreditsNFT({
+            requestsPerKilosecond: 200,
+            daysUntilUTCMidnightExpiration: 2
+          }))
+          .then((client) => client.createCreditsDelegationToken({
+            creditsTokenId: client.getOutput('mintCreditsNFT')
+          }))
+          .then((client) => client.grantAuthMethodToUsePKP({
+            pkpTokenId: client.getOutput('mintPKP')?.tokenId.hex,
+            authMethodId: 'app-id-xxx:user-id-yyy',
+            authMethodType: 918232,
+            scopes: ['sign_anything']
+          }));
+      } catch (error) {
+        console.error('Error:', error);
+        if (error.message.includes('ethereum is not defined')) {
+          alert('Please install MetaMask or another Web3 wallet');
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>
