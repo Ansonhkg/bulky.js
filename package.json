@@ -1,6 +1,6 @@
 {
   "name": "bulkie.js",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
@@ -27,6 +27,7 @@
   "dependencies": {
     "@useorbis/db-sdk": "0.0.60-alpha",
     "ethers": "5.7.2",
+    "openai": "^4.68.4",
     "typestub-ipfs-only-hash": "^4.0.0"
   },
   "peerDependencies": {

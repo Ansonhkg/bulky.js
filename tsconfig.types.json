@@ -15,5 +15,5 @@
   "include": [
     "./src/index.ts",
     "./global.d.ts"
-  ]
+  ],
 }

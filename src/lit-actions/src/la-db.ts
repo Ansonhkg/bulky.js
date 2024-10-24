@@ -100,20 +100,14 @@ namespace Helper {
       const allMetadata = await Helper.getStoredMetadata();
       return JSON.stringify(allMetadata);
     }
-
-    // if (params.operation === 'use') {
-    //   const allMetadata = await Helper.getStoredMetadata();
-    //   const selectedMetadata = allMetadata.find((metadata) => metadata.address === (params as KeyUseParams).address);
-    //   return JSON.stringify(selectedMetadata);
-    // }
   });
 
-  // Whe 'use' - we will decrypt the private key and use it to 
-  // perform different actions
+  // When 'use' - we will decrypt the private key and use it to 
+  // perform different actions (more to add)
   if (params.operation === 'use') {
 
     let allMetadata = JSON.parse(res);
-    const selectedMetadata = allMetadata.find((metadata) => metadata.address === (params as KeyUseParams).address);
+    const selectedMetadata = allMetadata.find((metadata: any) => metadata.address === (params as KeyUseParams).address);
 
     const decryptRes = await Lit.Actions.decryptAndCombine({
       accessControlConditions: selectedMetadata.accs,
@@ -139,30 +133,12 @@ namespace Helper {
         },
       })
     });
-
-    // const _data = res
-    // const decryptRes = await Lit.Actions.decryptToSingleNode({
-    //   accessControlConditions: res.accs,
-    //   ciphertext: res.ciphertext,
-    //   dataToEncryptHash: res.dataToEncryptHash,
-    //   chain: 'ethereum',
-    //   authSig: null, // <-- Signed by the PKP on Lit Action, that's why is null.
-    // });
-
-    // const privateKey = decryptRes.replace('lit_', '');
-    // const address = ethers.utils.computeAddress(privateKey);
-
-    // const wallet = new ethers.Wallet(privateKey);
-    // const signature = await wallet.signMessage('TESTING');
-
-
-  } else {
-    Lit.Actions.setResponse({
-      response: JSON.stringify({
-        success: true,
-        message: res,
-      })
-    });
+    return;
   }
-
+  Lit.Actions.setResponse({
+    response: JSON.stringify({
+      success: true,
+      message: res,
+    })
+  });
 })();

@@ -1,4 +1,6 @@
 import { CeramicDocument, OrbisDB } from "@useorbis/db-sdk"
+
+// @ts-ignore
 import { OrbisEVMAuth } from "@useorbis/db-sdk/auth";
 
 type KeyManagementRequest = { ownerAddress: string, metadata?: string };
@@ -9,12 +11,10 @@ export class DB {
   private _ORBIS_ENV = `did:pkh:eip155:1:0x3b5dd260598b7579a0b015a1f3bbf322adc499a1`;
 
   private _CONTEXT = {
-    "foo": "kjzl6kcym7w8yb9a8lebuciviazv5cxrxxt4f1xki2nljn21lanveh7gleibktc",
     "Bulkie": "kjzl6kcym7w8y924czxug1jh44yznwt8zp3bgyffhw9mklmtplj0ain6xv0z568",
   } as const;
 
   private _TABLE = {
-    "table_x": "kjzl6hvfrbw6c8at78yx3lqom5lyjr6xf1e30ydnxf3pvizmlowrz9jzoe8m0yw",
     "key_management": "kjzl6hvfrbw6ca1r1v0zm8y57yn2aawpuj4qvuyljchbgzk1xugplcbjuibr4qt"
   } as const;
 

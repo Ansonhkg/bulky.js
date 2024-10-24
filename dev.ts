@@ -1,9 +1,8 @@
-// import { grantCustomAuthUserAccessToken } from "./src/flows/grantCustomAuthUserAccessToken";
-
 import { ethers } from "ethers";
 import { Bulkie } from "./src/bulkie";
 import { detectedNetwork } from "./dev-utils";
-import { LIT_NETWORKS_KEYS } from "@lit-protocol/types";
+import { LIT_NETWORKS } from "@lit-protocol/constants";
+import { code as LA_AI_CODE } from "./src/lit-actions/dist/la-ai.js";
 
 import fs from 'fs';
 import { BulkieUtils } from "./src/utils";
@@ -17,7 +16,7 @@ import { BulkieUtils } from "./src/utils";
     guides: true,
     debug: true,
     litDebug: false,
-    network: detectedNetwork() as LIT_NETWORKS_KEYS,
+    network: detectedNetwork() as keyof typeof LIT_NETWORKS,
     signer: signer,
   });
 
@@ -79,6 +78,9 @@ import { BulkieUtils } from "./src/utils";
 
   // --------- access token usage ---------
 
+  /**
+   * ============================== OrbisDB Demo ==============================
+   */
   // 1. First we register a encrypted private key
   // await alice.use(accessToken).toRun('orbisdb/key-management/register', {
   //   pkpPublicKey: mintPKP.publicKey
@@ -96,22 +98,37 @@ import { BulkieUtils } from "./src/utils";
   // console.log("readData:", readData);
 
   // 3. We will pick the encrypted key we want to use. In this case we specify the address, which is the address of the encrypted private key
-  await alice.use(accessToken).toRun('orbisdb/key-management/use', {
-    pkpPublicKey: mintPKP.publicKey,
-    encryptedAddress: '0xBd684dBf021C3ede67E03B56997BC16141db7Bc2',
-  });
+  // await alice.use(accessToken).toRun('orbisdb/key-management/use', {
+  //   pkpPublicKey: mintPKP.publicKey,
+  //   encryptedAddress: '0xBd684dBf021C3ede67E03B56997BC16141db7Bc2',
+  // });
 
-  const useData = alice.getOutput('orbisdb/key-management/use');
-  console.log("useData:", useData);
+  // const useData = alice.getOutput('orbisdb/key-management/use');
+  // console.log("useData:", useData);
 
-  // use ethers to verify the signature from the message
-  const recoveredAddress = ethers.utils.verifyMessage(useData!.signedMessage, useData!.signature);
+  // const recoveredAddress = ethers.utils.verifyMessage(useData!.signedMessage, useData!.signature);
 
-  if (recoveredAddress === useData?.address ) {
-    console.log("✅ Signature verified");
-  } else {
-    console.log("❌ Signature verification failed");
-  }
+  // if (recoveredAddress === useData?.address) {
+  //   console.log("✅ Signature verified");
+  // } else {
+  //   console.log("❌ Signature verification failed");
+  // }
+  // ============================== done ==============================
+
+  /**
+  * ============================== AI API ==============================
+  */
+  await alice.use(accessToken!).toExecuteJs({
+    code: LA_AI_CODE,
+    jsParams: {
+      params: {
+        apiKey: "sk-3WVyQ7nNnRbfv6Xe0PPYm0Hw6sf19738bhP80z4VrNT3BlbkFJBAHO51R-j8A_aBNAwwxqaVcEkCQS4Nyugqg6tiwcwA",
+        prompt: "What is the weather in Tokyo?"
+      }
+    }
+  })
+
+  console.log(alice.getOutput('toExecuteJs'));
 
   // alice.use(accessToken).toRun('')
 

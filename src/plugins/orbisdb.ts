@@ -8,6 +8,8 @@ import {
   KeyUseParams
 } from "../lit-actions/src/la-db"
 import { HexAddress } from "../types"
+
+// @ts-ignore
 import { code } from '../lit-actions/dist/la-db';
 
 export type KMPublicData = {
