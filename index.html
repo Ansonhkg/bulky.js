@@ -1,25 +1,328 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bulkie SDK Test</title>
-</head>
-
-<body>
+  <title>Bulkie SDK Dashboard</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"
     type="application/javascript"></script>
   <script src="./dist/bulkie.min.js"></script>
+  <style>
+    :root {
+      --background: 240 10% 3.9%;
+      --foreground: 0 0% 98%;
+      --card: 240 10% 3.9%;
+      --card-foreground: 0 0% 98%;
+      --popover: 240 10% 3.9%;
+      --popover-foreground: 0 0% 98%;
+      --primary: 0 0% 98%;
+      --primary-foreground: 240 5.9% 10%;
+      --secondary: 240 3.7% 15.9%;
+      --secondary-foreground: 0 0% 98%;
+      --muted: 240 3.7% 15.9%;
+      --muted-foreground: 240 5% 64.9%;
+      --accent: 240 3.7% 15.9%;
+      --accent-foreground: 0 0% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 240 3.7% 15.9%;
+      --input: 240 3.7% 15.9%;
+      --ring: 240 4.9% 83.9%;
+      --radius: 0.5rem;
+    }
 
-  <button id="go">Go</button>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    }
+
+    html {
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 2.25rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      color: hsl(var(--muted-foreground));
+      font-size: 0.875rem;
+    }
+
+    .card {
+      background-color: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .steps {
+      display: grid;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .step {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      padding: 1rem;
+      background-color: hsl(var(--secondary));
+      border: 1px solid hsl(var(--border));
+      border-radius: calc(var(--radius) - 0.25rem);
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .step::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(to bottom right, transparent, transparent);
+      mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+      mask-composite: exclude;
+      pointer-events: none;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .step.active::before {
+      background: linear-gradient(to bottom right, hsl(var(--primary)), transparent);
+    }
+
+    .step.completed::before {
+      background: linear-gradient(to bottom right, hsl(147 50% 47%), transparent);
+    }
+
+    .step-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      margin-right: 0.875rem;
+      background-color: hsl(var(--muted));
+      border-radius: calc(var(--radius) - 0.25rem);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: hsl(var(--muted-foreground));
+      flex-shrink: 0;
+    }
+
+    .step.active .step-icon {
+      background-color: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .step.completed .step-icon {
+      background-color: hsl(147 50% 47%);
+      color: hsl(var(--primary));
+    }
+
+    .step-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .step h3 {
+      font-size: 0.875rem;
+      font-weight: 500;
+      line-height: 1.25rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .step p {
+      font-size: 0.75rem;
+      color: hsl(var(--muted-foreground));
+    }
+
+    button {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1rem;
+      background-color: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: 1px solid hsl(var(--primary));
+      border-radius: calc(var(--radius) - 0.25rem);
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: calc(var(--radius) - 0.25rem);
+      font-size: 0.875rem;
+      display: none;
+    }
+
+    .status.error {
+      display: block;
+      background-color: hsl(var(--destructive));
+      color: hsl(var(--destructive-foreground));
+    }
+
+    .status.success {
+      display: block;
+      background-color: hsl(147 50% 47% / 0.2);
+      color: hsl(147 50% 47%);
+      border: 1px solid hsl(147 50% 47% / 0.2);
+    }
+
+    .loading {
+      width: 1rem;
+      height: 1rem;
+      margin-right: 0.5rem;
+      border: 2px solid hsl(var(--primary-foreground) / 0.3);
+      border-top-color: hsl(var(--primary-foreground));
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header h1 {
+        font-size: 1.875rem;
+      }
+    }
+
+    @media (prefers-reduced-motion) {
+
+      .step,
+      .step::before,
+      button,
+      .loading {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Bulkie SDK</h1>
+      <p>Initialize and manage your Lit Protocol integration</p>
+    </header>
+
+    <div class="card">
+      <div class="steps">
+        <div class="step" id="walletStep">
+          <div class="step-icon">1</div>
+          <div class="step-content">
+            <h3>Connect Wallet</h3>
+            <p>Connect your Web3 wallet to get started</p>
+          </div>
+        </div>
+        <div class="step" id="pkpStep">
+          <div class="step-icon">2</div>
+          <div class="step-content">
+            <h3>Mint PKP</h3>
+            <p>Create your Programmable Key Pair</p>
+          </div>
+        </div>
+        <div class="step" id="creditsStep">
+          <div class="step-icon">3</div>
+          <div class="step-content">
+            <h3>Mint Credits</h3>
+            <p>Set up your usage credits</p>
+          </div>
+        </div>
+        <div class="step" id="delegationStep">
+          <div class="step-icon">4</div>
+          <div class="step-content">
+            <h3>Create Delegation</h3>
+            <p>Set up credits delegation token</p>
+          </div>
+        </div>
+        <div class="step" id="authStep">
+          <div class="step-icon">5</div>
+          <div class="step-content">
+            <h3>Grant Auth Method</h3>
+            <p>Configure authentication permissions</p>
+          </div>
+        </div>
+      </div>
+
+      <button id="go" type="button">Initialize SDK</button>
+      <div id="status" class="status"></div>
+    </div>
+  </div>
 
   <script>
+    const steps = {
+      wallet: document.getElementById('walletStep'),
+      pkp: document.getElementById('pkpStep'),
+      credits: document.getElementById('creditsStep'),
+      delegation: document.getElementById('delegationStep'),
+      auth: document.getElementById('authStep')
+    };
 
-    document.getElementById('go').addEventListener('click', go);
+    const goButton = document.getElementById('go');
+    const statusEl = document.getElementById('status');
 
-    async function go() {
+    function updateStep(stepKey, status) {
+      const step = steps[stepKey];
+      step.classList.remove('active', 'completed');
+      step.classList.add(status);
+    }
+
+    function showStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = 'status ' + type;
+    }
+
+    goButton.addEventListener('click', async () => {
       try {
+        goButton.disabled = true;
+        goButton.innerHTML = '<span class="loading"></span>Initializing...';
+
         // Initialize provider
         const yellowstoneChain = {
           contractAddress: null,
@@ -33,16 +336,18 @@
           vmType: 'EVM',
         };
 
-        const provider = new ethers.providers.Web3Provider((window).ethereum);
+        updateStep('wallet', 'active');
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
 
-        // Check current network and switch if necessary
+        // Check and switch network if necessary
         const network = await provider.getNetwork();
         if (network.chainId !== yellowstoneChain.chainId) {
           try {
-            await provider.send("wallet_switchEthereumChain", [{ chainId: ethers.utils.hexValue(yellowstoneChain.chainId) }]);
+            await provider.send("wallet_switchEthereumChain", [{
+              chainId: ethers.utils.hexValue(yellowstoneChain.chainId)
+            }]);
           } catch (switchError) {
-            // This error code indicates that the chain has not been added to MetaMask
             if (switchError.code === 4902) {
               await provider.send("wallet_addEthereumChain", [yellowstoneChain]);
             } else {
@@ -50,10 +355,11 @@
             }
           }
         }
-        // Request account access
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-        // Initialize the SDK with provider
+        updateStep('wallet', 'completed');
+        updateStep('pkp', 'active');
+
+        // Initialize Bulkie SDK
         const alice = new window.Bulkie({
           debug: true,
           litDebug: true,
@@ -62,31 +368,54 @@
           network: 'datil',
         });
 
-        console.log('Bulkie SDK initialized:', alice);
-
         await alice.connectToLitNodeClient()
-          .then((client) => client.connectToLitContracts())
-          .then((client) => client.mintPKP({ selfFund: true, amountInEth: "0.0001" }))
-          .then((client) => client.mintCreditsNFT({
-            requestsPerKilosecond: 200,
-            daysUntilUTCMidnightExpiration: 2
-          }))
-          .then((client) => client.createCreditsDelegationToken({
-            creditsTokenId: client.getOutput('mintCreditsNFT')
-          }))
-          .then((client) => client.grantAuthMethodToUsePKP({
-            pkpTokenId: client.getOutput('mintPKP')?.tokenId.hex,
-            authMethodId: 'app-id-xxx:user-id-yyy',
-            authMethodType: 918232,
-            scopes: ['sign_anything']
-          }));
+          .then((client) => {
+            updateStep('pkp', 'completed');
+            updateStep('credits', 'active');
+            return client.connectToLitContracts();
+          })
+          .then((client) => {
+            return client.mintPKP({ selfFund: true, amountInEth: "0.0001" });
+          })
+          .then((client) => {
+            updateStep('credits', 'completed');
+            updateStep('delegation', 'active');
+            return client.mintCreditsNFT({
+              requestsPerKilosecond: 200,
+              daysUntilUTCMidnightExpiration: 2
+            });
+          })
+          .then((client) => {
+            updateStep('delegation', 'completed');
+            updateStep('auth', 'active');
+            return client.createCreditsDelegationToken({
+              creditsTokenId: client.getOutput('mintCreditsNFT')
+            });
+          })
+          .then((client) => {
+            return client.grantAuthMethodToUsePKP({
+              pkpTokenId: client.getOutput('mintPKP')?.tokenId.hex,
+              authMethodId: 'app-id-xxx:user-id-yyy',
+              authMethodType: 918232,
+              scopes: ['sign_anything']
+            });
+          });
+
+        updateStep('auth', 'completed');
+        showStatus('Successfully initialized Bulkie SDK!', 'success');
+        goButton.innerHTML = 'Initialization Complete';
+
       } catch (error) {
         console.error('Error:', error);
+        showStatus(error.message || 'An error occurred during initialization', 'error');
+        goButton.innerHTML = 'Retry Initialization';
+        goButton.disabled = false;
+
         if (error.message.includes('ethereum is not defined')) {
-          alert('Please install MetaMask or another Web3 wallet');
+          showStatus('Please install MetaMask or another Web3 wallet', 'error');
         }
       }
-    }
+    });
   </script>
 </body>
 

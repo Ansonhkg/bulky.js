@@ -3,3 +3,4 @@ bun.lockb
 .env
 dist
 doc
+!./src/lit-actions/dist/*

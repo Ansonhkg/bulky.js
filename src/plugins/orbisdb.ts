@@ -9,8 +9,8 @@ import {
 } from "../lit-actions/src/la-db"
 import { HexAddress } from "../types"
 
-// @ts-ignore
-import { code } from '../lit-actions/dist/la-db';
+// @ts-ignore - no declaration file
+import { code } from '../lit-actions/generated/la-db.js'
 
 export type KMPublicData = {
   ciphertext: string;

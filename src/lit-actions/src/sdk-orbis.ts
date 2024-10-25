@@ -8,6 +8,13 @@ type KeyManagementRequest = { ownerAddress: string, metadata?: string };
 export class DB {
   private _CERAMIC_GATEWAY = "https://ceramic-orbisdb-mainnet-direct.hirenodes.io/";
   private _ORBIS_GATEWAY = "https://studio.useorbis.com";
+
+  /**
+   * Charles: will transform it into an API key soon (24 Oct, 2024)
+   * 8ball: 
+   * - Data can be written by anyone, read by anyone, modified only by the original author.
+   * - EnvIDs will be migrated to UUIDv7 at some point in the future, for convenience sake. 
+   */
   private _ORBIS_ENV = `did:pkh:eip155:1:0x3b5dd260598b7579a0b015a1f3bbf322adc499a1`;
 
   private _CONTEXT = {
