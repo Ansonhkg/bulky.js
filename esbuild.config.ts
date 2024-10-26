@@ -112,7 +112,7 @@ Promise.all(promises)
           const fileName = path.relative(process.cwd(), file.path);
           console.log(`🗂️  File: ${fileName}`);
           console.log(
-            `   Size: ${mbInDecimal} MB (decimal) | ${mbInBinary} MB (binary)`
+            `\x1b[90m   Size: ${mbInDecimal} MB (decimal) | ${mbInBinary} MB (binary}\x1b[0m`
           );
         });
       }

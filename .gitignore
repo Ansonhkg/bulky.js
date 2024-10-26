@@ -5,3 +5,6 @@ dist
 doc
 !./src/lit-actions/dist/*
 generated
+.DS_Store
+accessToken.json
+mintPKP.json

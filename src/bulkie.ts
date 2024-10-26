@@ -1,6 +1,6 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { AuthMethod, AuthSig, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
+import { AuthMethod, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, LIT_ABILITY } from '@lit-protocol/constants';
 import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, OutputHandler } from './types/common-types';
@@ -18,7 +18,12 @@ import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
 import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
 import { PKG, PKG_TYPES, PkgParams } from './plugins/plugins';
 import { VERSION } from './version';
-import { createKeyReadParams, createKeyRegisterParams, createKeyUseParams, getKeyManagementLitAction } from './plugins/orbisdb';
+import {
+  createKeyReadParams,
+  createKeyRegisterParams,
+  createKeyUseParams,
+  getKeyManagementLitAction
+} from './plugins/orbisdb';
 
 
 /**

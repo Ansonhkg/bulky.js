@@ -12,16 +12,16 @@
   },
   "license": "MIT",
   "scripts": {
+    "postinstall": "bun run postinstall.config.ts",
+    "prebuild": "bun run build:lit-actions",
+    "prepublishOnly": "bun run version.config.ts && bun run build",
     "dev": "bun run prebuild && bun run dev.ts",
-    "prebuild": "bun run ./esbuild.config.ts",
     "build:lit-actions": "bun run ./esbuild.config.ts",
-    "build": "bun run build:cjs && bun run build:esm && bun run build:types",
+    "build": "concurrently \"bun run build:cjs\" \"bun run build:esm\" \"bun run build:types\" \"bun run build:umd\"",
     "build:cjs": "tsc --project tsconfig.cjs.json",
     "build:esm": "tsc --project tsconfig.esm.json",
-    "build:umd": "webpack --config webpack.config.js",
     "build:types": "tsc --project tsconfig.types.json",
-    "prepublishOnly": "bun run version.config.ts && bun run build",
-    "postbuild": "bun run postbuild.config.ts"
+    "build:umd": "webpack --config webpack.config.js"
   },
   "files": [
     "dist"
@@ -54,6 +54,7 @@
     "@lit-protocol/wrapped-keys": "^6.11.0",
     "@types/jszip": "^3.4.0",
     "buffer": "^6.0.3",
+    "concurrently": "^9.0.1",
     "crypto-browserify": "^3.12.1",
     "esbuild": "^0.24.0",
     "stream-browserify": "^3.0.0",
