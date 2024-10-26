@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulkie SDK Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.1/ethers.umd.min.js"
+    type="application/javascript"></script>
+  <script src="./bulkie.min.js"></script>
+  <script src="./bulkie-browser.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Bulkie SDK</h1>
+      <p>Initialize and manage your Lit Protocol integration</p>
+    </header>
+
+    <div class="card">
+      <div id="functions-container" class="functions">
+        <!-- Functions will be dynamically added here -->
+      </div>
+      <div id="status" class="status"></div>
+    </div>
+  </div>
+
+  <script>
+    let alice;
+    let signer;
+
+    // Map of functions with dependencies and actions
+    const functionMap = {
+      connect: {
+        id: "walletStep",
+        name: "Connect Wallet",
+        action: connect,
+        dependencies: [],
+      },
+      mintPKP: {
+        id: "pkpStep",
+        name: "Mint PKP",
+        action: mintPKP,
+        dependencies: ["connect"],
+      },
+      mintCredits: {
+        id: "creditsStep",
+        name: "Mint Credits",
+        action: mintCredits,
+        dependencies: ["connect"],
+      },
+      createDelegation: {
+        id: "delegationStep",
+        name: "Create Delegation",
+        action: createDelegation,
+        dependencies: ["mintCredits"],
+      },
+      grantAuth: {
+        id: "authStep",
+        name: "Grant Auth Method",
+        action: grantAuth,
+        dependencies: ["createDelegation"],
+      },
+    };
+
+    // Tracks completed functions to control enable/disable states
+    const completedFunctions = new Set();
+
+    // Function to initialize and render buttons with dependencies
+    function renderFunctions() {
+      const container = document.getElementById("functions-container");
+      container.innerHTML = "";
+
+      Object.values(functionMap).forEach((func) => {
+        const button = document.createElement("button");
+        button.id = func.id;
+        button.textContent = func.name;
+        button.classList.add("step");
+        button.disabled = !areDependenciesMet(func.dependencies);
+
+        button.addEventListener("click", async () => {
+          await func.action();
+          completedFunctions.add(func.id);
+          updateButtonStates();
+        });
+
+        container.appendChild(button);
+      });
+    }
+
+    // Check if dependencies are met for a function
+    function areDependenciesMet(dependencies) {
+      return dependencies.every((dep) => completedFunctions.has(functionMap[dep].id));
+    }
+
+    // Update button states based on completed functions
+    function updateButtonStates() {
+      Object.values(functionMap).forEach((func) => {
+        const button = document.getElementById(func.id);
+        button.disabled = !areDependenciesMet(func.dependencies);
+      });
+    }
+
+    function updateStep(stepId, status) {
+      const step = document.getElementById(stepId);
+      step.classList.remove("active", "completed");
+      step.classList.add(status);
+    }
+
+    function showStatus(message, type) {
+      const statusEl = document.getElementById("status");
+      statusEl.textContent = message;
+      statusEl.className = "status " + type;
+    }
+
+    async function connect() {
+      try {
+        updateStep("walletStep", "active");
+        signer = await BulkieBrowser.getSigner();
+
+        alice = new window.Bulkie({
+          debug: true,
+          litDebug: true,
+          guides: true,
+          signer: signer,
+          network: "datil",
+        });
+
+        await alice.connectToLitNodeClient();
+        await alice.connectToLitContracts();
+
+        updateStep("walletStep", "completed");
+        showStatus("Lit nodes connected successfully!", "success");
+      } catch (error) {
+        console.error("Error:", error);
+        showStatus(error.message || "Failed to connect wallet", "error");
+      }
+    }
+
+    async function mintPKP() {
+      try {
+        if (!alice) {
+          showStatus("Please connect wallet first", "error");
+          return;
+        }
+        updateStep("pkpStep", "active");
+        await alice.mintPKP({ selfFund: true, amountInEth: "0.0001", cache: true });
+        updateStep("pkpStep", "completed");
+        showStatus("PKP minted successfully!", "success");
+      } catch (error) {
+        console.error("Error:", error);
+        showStatus(error.message || "Failed to mint PKP", "error");
+      }
+    }
+
+    async function mintCredits() {
+      try {
+        if (!alice?.getOutput("mintPKP")) {
+          showStatus("Please mint PKP first", "error");
+          return;
+        }
+        updateStep("creditsStep", "active");
+        await alice.mintCreditsNFT({
+          requestsPerKilosecond: 200,
+          daysUntilUTCMidnightExpiration: 2,
+        });
+        updateStep("creditsStep", "completed");
+        showStatus("Credits minted successfully!", "success");
+      } catch (error) {
+        console.error("Error:", error);
+        showStatus(error.message || "Failed to mint credits", "error");
+      }
+    }
+
+    async function createDelegation() {
+      try {
+        if (!alice?.getOutput("mintCreditsNFT")) {
+          showStatus("Please mint credits first", "error");
+          return;
+        }
+        updateStep("delegationStep", "active");
+        await alice.createCreditsDelegationToken({
+          creditsTokenId: alice.getOutput("mintCreditsNFT"),
+        });
+        updateStep("delegationStep", "completed");
+        showStatus("Delegation created successfully!", "success");
+      } catch (error) {
+        console.error("Error:", error);
+        showStatus(error.message || "Failed to create delegation", "error");
+      }
+    }
+
+    async function grantAuth() {
+      try {
+        if (!alice?.getOutput("createCreditsDelegationToken")) {
+          showStatus("Please create delegation first", "error");
+          return;
+        }
+        updateStep("authStep", "active");
+        await alice.grantAuthMethodToUsePKP({
+          pkpTokenId: alice.getOutput("mintPKP")?.tokenId.hex,
+          authMethodId: "app-id-xxx:user-id-yyy",
+          authMethodType: 918232,
+          scopes: ["sign_anything"],
+        });
+        updateStep("authStep", "completed");
+        showStatus("Auth method granted successfully!", "success");
+      } catch (error) {
+        console.error("Error:", error);
+        showStatus(error.message || "Failed to grant auth method", "error");
+      }
+    }
+
+    // Initialize the function buttons when the page loads
+    document.addEventListener("DOMContentLoaded", renderFunctions);
+  </script>
+</body>
+
+</html>

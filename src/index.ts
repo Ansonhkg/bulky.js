@@ -1,5 +1,9 @@
 export { Bulkie } from "./bulkie";
-export { BulkieUtils } from "./utils";
+export {
+  BulkieUtils,
+  BulkieBrowser
+} from "./utils";
+
 export { grantCustomAuthUserAccessToken } from "./flows/grantCustomAuthUserAccessToken";
 
 // export types if you want, but i don't want to.

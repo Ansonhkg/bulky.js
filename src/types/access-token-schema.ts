@@ -17,7 +17,8 @@ const BaseAccessTokenParams = z.object({
     request: z.union([z.literal('*'), z.string()])
   })).min(1, "resources is required"), // At least one resource must be specified
   creditsDelegationToken: z.custom<AuthSig>().optional(), // Optional delegation token of type `AuthSig`
-  outputId: z.string().optional() // Optional output ID
+  outputId: z.string().optional(), // Optional output ID
+  cache: z.boolean().optional() // Optional cache flag
 });
 
 // Custom Auth with Code schema

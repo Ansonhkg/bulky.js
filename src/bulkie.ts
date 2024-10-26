@@ -3,7 +3,7 @@ import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { AuthMethod, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, LIT_ABILITY } from '@lit-protocol/constants';
-import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, OutputHandler } from './types/common-types';
+import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, OutputHandler, BrowserCache } from './types/common-types';
 import { AuthMethodScopes } from './types/auth-types';
 import { AccessTokenParams, AccessTokenParamsSchema } from './types/access-token-schema';
 import {
@@ -12,7 +12,7 @@ import {
   LitAccessControlConditionResource,
   LitRLIResource
 } from '@lit-protocol/auth-helpers';
-import { BulkieBouncer, BulkieUtils } from './utils';
+import { BulkieBouncer, BulkieBrowser, BulkieUtils } from './utils';
 import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
 import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
 import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
@@ -343,7 +343,12 @@ export class Bulkie {
     )
   }
 
-  async mintPKP(params?: { selfFund?: boolean, amountInEth?: string } & OutputHandler): Promise<this> {
+  async mintPKP(params?: {
+    selfFund?: boolean,
+    amountInEth?: string
+  } & OutputHandler
+    & BrowserCache
+  ): Promise<this> {
 
     let _nextSteps: STEP_VALUES = [];
 
@@ -417,7 +422,7 @@ export class Bulkie {
           }
         }
 
-        this._setOutput(FN.mintPKP, {
+        const output = {
           tokenId: {
             hex: res.pkp.tokenId,
             decimal: decimalTokenId,
@@ -428,7 +433,13 @@ export class Bulkie {
             hash: res.tx.hash,
             explorer: hashOnExplorer
           },
-        }, params?.outputId);
+        };
+
+        this._setOutput(FN.mintPKP, output, params?.outputId);
+
+        if (params?.cache) {
+          BulkieBrowser.cache('mintPKP', JSON.stringify(output));
+        }
 
         return this;
       },
@@ -448,7 +459,9 @@ export class Bulkie {
      * The number of days until the token expires at UTC midnight.
      */
     daysUntilUTCMidnightExpiration: number;
-  } & OutputHandler) {
+  } & OutputHandler
+    & BrowserCache
+  ) {
 
     if (!params.requestsPerKilosecond || !params.daysUntilUTCMidnightExpiration) {
       throw new Error('requestsPerKilosecond and daysUntilUTCMidnightExpiration are required');
@@ -465,6 +478,10 @@ export class Bulkie {
         this._debug(`Capacity Token ID: ${capacityTokenIdStr}`);
 
         this._setOutput(FN.mintCreditsNFT, capacityTokenIdStr, params?.outputId);
+
+        if (params?.cache) {
+          BulkieBrowser.cache('mintCreditsNFT', capacityTokenIdStr);
+        }
 
         return this;
       },
@@ -483,7 +500,9 @@ export class Bulkie {
     expiry?: string,
     creditsTokenId: string,
     delegatees?: HexAddress[],
-  } & OutputHandler) {
+  } & OutputHandler
+    & BrowserCache
+  ) {
     return this._run(
       'Create Credits Delegation Token',
       'createCreditsDelegationToken',
@@ -519,6 +538,10 @@ export class Bulkie {
         }
 
         this._setOutput('createCreditsDelegationToken', capacityDelegationAuthSig, params?.outputId);
+
+        if (params?.cache) {
+          BulkieBrowser.cache('createCreditsDelegationToken', JSON.stringify(capacityDelegationAuthSig));
+        }
 
         return this;
       },
@@ -597,6 +620,10 @@ export class Bulkie {
           });
 
           this._setOutput(FN.createAccessToken, sessionSigs, params?.outputId);
+
+          if (params?.cache) {
+            BulkieBrowser.cache('createAccessToken', JSON.stringify(sessionSigs));
+          }
 
           return this;
         } else {

@@ -2,17 +2,7 @@ const path = require("path");
 const TerserPlugin = require("terser-webpack-plugin");
 const webpack = require("webpack");
 
-module.exports = {
-  mode: "production",
-  entry: ["buffer", "./src/index.ts"],
-  output: {
-    path: path.resolve(__dirname, "dist"),
-    filename: "bulkie.min.js",
-    library: "Bulkie", // Changed this
-    libraryTarget: "umd", // Changed to use libraryTarget instead of library.type
-    libraryExport: "Bulkie", // Added this
-    globalObject: "this",
-  },
+const sharedConfig = {
   resolve: {
     extensions: [".ts", ".js"],
     fallback: {
@@ -61,3 +51,32 @@ module.exports = {
     }),
   ],
 };
+
+module.exports = [
+  {
+    mode: "production",
+    entry: ["buffer", "./src/index.ts"],
+    output: {
+      path: path.resolve(__dirname, "dist"),
+      filename: "bulkie.min.js",
+      library: "Bulkie", // Changed this
+      libraryTarget: "umd", // Changed to use libraryTarget instead of library.type
+      libraryExport: "Bulkie", // Removing this export the whole library
+      globalObject: "this",
+    },
+    ...sharedConfig,
+  },
+  {
+    mode: "production",
+    entry: ["buffer", "./src/index.ts"],
+    output: {
+      path: path.resolve(__dirname, "dist"),
+      filename: "bulkie-browser.min.js",
+      library: "BulkieBrowser", // Changed this
+      libraryTarget: "umd", // Changed to use libraryTarget instead of library.type
+      libraryExport: "BulkieBrowser", // Removing this export the whole library
+      globalObject: "this",
+    },
+    ...sharedConfig,
+  },
+];

@@ -1,35 +1,29 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
-import { AuthMethod, AuthSig, SessionSigsMap } from '@lit-protocol/types';
+import { AuthSig, SessionSigsMap } from '@lit-protocol/types';
 import { PKG, PkgReturnTypes, PkgSteps } from '../plugins/plugins';
+import { ObjectMapFromArray } from './utils';
 
-export const BulkieFns = {
-  // connections
-  'connectToLitNodeClient': 'connectToLitNodeClient',
-  'connectToLitContracts': 'connectToLitContracts',
+// ----- BULKIE FUNCTIONS
+export const NATIVE_FN_VALUES = [
+  'connectToLitNodeClient',
+  'connectToLitContracts',
+  'mintPKP',
+  'mintCreditsNFT',
+  'createCreditsDelegationToken',
+  'createAccessToken',
+  'grantAuthMethodToUsePKP',
+  'grantIPFSCIDtoUsePKP',
+  'getPkps',
+  'toExecuteJs',
+  'toPkpSign',
+] as const;
 
-  // minting
-  'mintPKP': 'mintPKP',
-  'mintCreditsNFT': 'mintCreditsNFT',
+export const NATIVE_FNS = ObjectMapFromArray(NATIVE_FN_VALUES);
 
-  // creating tokens
-  'createCreditsDelegationToken': "createCreditsDelegationToken",
-  'createAccessToken': 'createAccessToken',
-
-  // granting PKP permissions to do something
-  'grantAuthMethodToUsePKP': 'grantAuthMethodToUsePKP',
-  'grantIPFSCIDtoUsePKP': 'grantIPFSCIDtoUsePKP',
-
-  // getters
-  'getPkps': 'getPkps',
-
-  // actions
-  'toExecuteJs': 'toExecuteJs',
-  'toPkpSign': 'toPkpSign',
-} as const;
-
+// ----- FUNCTIONS
 export const FN = {
-  ...BulkieFns,
+  ...NATIVE_FNS,
   ...PKG,
 } as const;
 
@@ -115,4 +109,8 @@ export type IPFSCIDv0 = `Qm${string}`;
 
 export type OutputHandler = {
   outputId?: string;
+}
+
+export type BrowserCache = {
+  cache?: boolean;
 }

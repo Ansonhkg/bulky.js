@@ -1,4 +1,5 @@
 import { HexAddress } from "../types/common-types";
+import { ObjectMapFromArray } from "../types/utils";
 import { KMPublicData } from "./orbisdb";
 
 export type PKG_TYPES = keyof typeof PKG | `Qm${string}`;
@@ -7,12 +8,14 @@ export type PKG_VALUES = (typeof PKG)[keyof typeof PKG];
 /**
  * 1. Add a new entry to the PKG object
  */
-export const PKG = {
-  'wrapped-keys/generate-private-key': 'wrapped-keys/generate-private-key',
-  'orbisdb/key-management/read': 'orbisdb/key-management/read',
-  'orbisdb/key-management/register': 'orbisdb/key-management/register',
-  'orbisdb/key-management/use': 'orbisdb/key-management/use',
-} as const;
+export const PKG_VALUES = [
+  'wrapped-keys/generate-private-key',
+  'orbisdb/key-management/read',
+  'orbisdb/key-management/register',
+  'orbisdb/key-management/use',
+] as const;
+
+export const PKG = ObjectMapFromArray(PKG_VALUES);
 
 /**
  * 2. Add the expected params for the pkg
