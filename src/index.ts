@@ -8,7 +8,10 @@ export {
   FunctionReturnTypes,
   HexAddress,
   IPFSCIDv0,
+} from "./types/common-types";
+
+export {
   AuthMethodScopes
-} from "./types";
+} from "./types/auth-types";
 
 export { grantCustomAuthUserAccessToken } from "./flows/grantCustomAuthUserAccessToken";

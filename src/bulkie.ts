@@ -3,20 +3,23 @@ import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { AuthMethod, AuthSig, LIT_NETWORKS_KEYS, SessionSigsMap } from '@lit-protocol/types';
 import { ethers, Signer } from 'ethers';
 import { RPC_URL_BY_NETWORK, METAMASK_CHAIN_INFO_BY_NETWORK, LIT_ABILITY } from '@lit-protocol/constants';
-import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, AuthMethodScopes, OutputHandler } from './types';
+import { BulkieSupportedFunctions, FN, FunctionReturnTypes, IPFSCIDv0, STEP, STEP_VALUES, UNAVAILABLE_STEP, HexAddress, OutputHandler } from './types/common-types';
+import { AuthMethodScopes } from './types/auth-types';
+import { AccessTokenParams, AccessTokenParamsSchema } from './types/access-token-schema';
 import {
   LitActionResource,
   LitPKPResource,
   LitAccessControlConditionResource,
   LitRLIResource
 } from '@lit-protocol/auth-helpers';
-import { BulkieUtils } from './utils';
+import { BulkieBouncer, BulkieUtils } from './utils';
 import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
 import { validateSessionSigs, formatSessionSigs } from '@lit-protocol/misc';
 import { api as wrappedKeysApi } from '@lit-protocol/wrapped-keys';
 import { PKG, PKG_TYPES, PkgParams } from './plugins/plugins';
 import { VERSION } from './version';
 import { createKeyReadParams, createKeyRegisterParams, createKeyUseParams, getKeyManagementLitAction } from './plugins/orbisdb';
+
 
 /**
  * This class aims to provide a simple, strongly-typed interface for interacting with the Lit Protocol. 
@@ -38,8 +41,8 @@ export class Bulkie {
 
   // -- requirements
   private network: LIT_NETWORKS_KEYS;
-  private litNodeClient: LitNodeClient;
-  private litContracts: LitContracts;
+  private litNodeClient!: LitNodeClient;
+  private litContracts!: LitContracts;
   private signer: Signer | undefined;
   private rpc: string;
 
@@ -112,7 +115,7 @@ export class Bulkie {
 
         const tokens = await this.litContracts.pkpNftContractUtils.read.getTokensByAddress(signerAddress);
 
-        const res = await Promise.all(
+        const promises = Promise.all(
           tokens.map(async (tokenId: string) => {
             const publicKey = await this.litContracts.pkpPermissionsContract.read.getPubkey(tokenId);
             const ethAddress = ethers.utils.computeAddress(`0x${publicKey.slice(2)}`);
@@ -128,6 +131,8 @@ export class Bulkie {
             };
           })
         );
+
+        const res = await promises;
 
         this._setOutput(FN.getPkps, res);
 
@@ -518,76 +523,9 @@ export class Bulkie {
     )
   }
 
-  async createAccessToken(params: {
-    expiration?: string; // ISO string
-    pkpPublicKey: HexAddress;
-    type: 'custom_auth' | 'native_auth' | 'eoa',
-    resources: {
-      type:
-      'pkp-signing' |
-      'lit-action-execution' |
-      'rate-limit-increase-auth' |
-      'access-control-condition-decryption' |
-      'access-control-condition-signing',
-      request: string | '*'
-    }[],
-    creditsDelegationToken?: AuthSig;
-  } & (
-      (| {
-        type: 'native_auth' | 'custom_auth';
-      } & ({
-        jsParams: any;
-        code: string;
+  async createAccessToken(params: AccessTokenParams) {
 
-        /**
-         * Make sure that this ipfsCid is pinned on the IPFS node so we can fetch it later.
-         */
-        ipfsCid?: IPFSCIDv0
-      }) | ({
-        jsParams: any;
-        permissions?: {
-          grantIPFSCIDtoUsePKP?: {
-            scopes: AuthMethodScopes;
-          }
-        },
-
-        code?: string;
-
-        /**
-         * Make sure that this ipfsCid is pinned on the IPFS node so we can fetch it later.
-         */
-        ipfsCid: IPFSCIDv0
-      }))
-      | { type: 'eoa' }
-    ) & OutputHandler) {
-
-
-    if (params.type === 'eoa' || params.type === 'native_auth') {
-      throw new Error('Native auth and EOA are not supported yet');
-    }
-
-    if (params.type === 'custom_auth') {
-
-      if (!params.code && !params.ipfsCid) {
-        throw new Error('Either code or ipfsCid must be provided');
-      }
-      if (params.code && params.ipfsCid) {
-        throw new Error('Only one of code or ipfsCid should be provided, not both');
-      }
-
-      if (!params.jsParams) {
-        throw new Error('jsParams is required');
-      }
-
-    }
-
-    if (!params.pkpPublicKey) {
-      throw new Error('pkpPublicKey is required');
-    }
-
-    if (!params.resources.length || params.resources.length === 0) {
-      throw new Error('resources is required');
-    }
+    BulkieBouncer.check(AccessTokenParamsSchema, params);
 
     const _pkpPublicKey: string = params.pkpPublicKey.startsWith('0x') ? params.pkpPublicKey.slice(2) : params.pkpPublicKey;
 
@@ -681,7 +619,7 @@ export class Bulkie {
      * Recommend to use a very high number for custom auth method types.
      */
     authMethodType: number;
-    scopes: AuthMethodScopes
+    scopes: AuthMethodScopes[]
   } & OutputHandler) {
 
     // no_permission = 0
@@ -732,7 +670,7 @@ export class Bulkie {
   async grantIPFSCIDtoUsePKP(params: {
     pkpTokenId: HexAddress,
     ipfsCid: IPFSCIDv0,
-    scopes: AuthMethodScopes
+    scopes: AuthMethodScopes[]
   } & OutputHandler) {
 
     // no_permission = 0
@@ -1067,8 +1005,6 @@ export class Bulkie {
         []
       )
     }
-
-
 
     if (pkg.startsWith('Qm')) {
       return this._run(

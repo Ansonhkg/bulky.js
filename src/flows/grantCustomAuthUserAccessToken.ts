@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { Bulkie } from '../bulkie';
 import { BulkieUtils } from "../utils";
-import { FN } from "../types";
+import { FN } from "../types/common-types";
 import { LIT_NETWORKS_KEYS } from "@lit-protocol/types";
 
 

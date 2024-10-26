@@ -1,4 +1,4 @@
-import { HexAddress } from "../types";
+import { HexAddress } from "../types/common-types";
 import { KMPublicData } from "./orbisdb";
 
 export type PKG_TYPES = keyof typeof PKG | `Qm${string}`;

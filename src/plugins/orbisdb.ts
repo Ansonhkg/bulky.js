@@ -7,7 +7,7 @@ import {
   KeyUpdateParams,
   KeyUseParams
 } from "../lit-actions/src/la-db"
-import { HexAddress } from "../types"
+import { HexAddress } from "../types/common-types"
 
 // @ts-ignore - no declaration file
 import { code } from '../lit-actions/generated/la-db.js'

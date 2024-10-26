@@ -1,11 +1,9 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { AuthMethod, AuthSig, SessionSigsMap } from '@lit-protocol/types';
-import { PKG, PkgReturnTypes, PkgSteps } from './plugins/plugins';
+import { PKG, PkgReturnTypes, PkgSteps } from '../plugins/plugins';
 
-
-
-export const GeneralFns = {
+export const BulkieFns = {
   // connections
   'connectToLitNodeClient': 'connectToLitNodeClient',
   'connectToLitContracts': 'connectToLitContracts',
@@ -31,7 +29,7 @@ export const GeneralFns = {
 } as const;
 
 export const FN = {
-  ...GeneralFns,
+  ...BulkieFns,
   ...PKG,
 } as const;
 
@@ -114,8 +112,6 @@ interface PKPTokenId {
 }
 
 export type IPFSCIDv0 = `Qm${string}`;
-
-export type AuthMethodScopes = ('no_permission' | 'sign_anything' | 'eip_191_personal_sign')[];
 
 export type OutputHandler = {
   outputId?: string;

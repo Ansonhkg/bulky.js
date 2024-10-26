@@ -1,7 +1,9 @@
 import Hash from "typestub-ipfs-only-hash";
-import { IPFSCIDv0 } from "./types";
+import { IPFSCIDv0 } from "./types/common-types";
 import { SessionSigsMap } from "@lit-protocol/types";
 import { ethers } from "ethers";
+import { fromError } from "zod-validation-error";
+import { z } from "zod";
 
 export namespace BulkieUtils {
   export const strToIPFSHash = async (str: string): Promise<IPFSCIDv0> => {
@@ -52,3 +54,14 @@ export namespace BulkieUtils {
   };
 }
 
+export namespace BulkieBouncer {
+  export const check = <T>(schema: z.ZodSchema<T>, data: T) => {
+    try {
+      schema.parse(data);
+    } catch (error) {
+      const validationError = fromError(error);
+      console.log(validationError.toString());
+      throw validationError;
+    }
+  }
+}

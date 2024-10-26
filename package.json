@@ -20,7 +20,8 @@
     "build:esm": "tsc --project tsconfig.esm.json",
     "build:umd": "webpack --config webpack.config.js",
     "build:types": "tsc --project tsconfig.types.json",
-    "prepublishOnly": "bun run version.config.ts &&bun run build"
+    "prepublishOnly": "bun run version.config.ts && bun run build",
+    "postbuild": "bun run postbuild.config.ts"
   },
   "files": [
     "dist"
@@ -29,14 +30,16 @@
     "@useorbis/db-sdk": "0.0.60-alpha",
     "ethers": "5.7.2",
     "openai": "^4.68.4",
-    "typestub-ipfs-only-hash": "^4.0.0"
+    "typestub-ipfs-only-hash": "^4.0.0",
+    "zod": "^3.23.8",
+    "zod-validation-error": "^3.4.0"
   },
   "peerDependencies": {
     "@lit-protocol/accs-schemas": "^0.0.15",
-    "@lit-protocol/constants": "^7.0.0-alpha.6",
-    "@lit-protocol/contracts-sdk": "^7.0.0-alpha.6",
-    "@lit-protocol/lit-node-client": "^7.0.0-alpha.6",
-    "@lit-protocol/types": "^7.0.0-alpha.6",
+    "@lit-protocol/constants": "^7.0.0-alpha.9",
+    "@lit-protocol/contracts-sdk": "^7.0.0-alpha.9",
+    "@lit-protocol/lit-node-client": "^7.0.0-alpha.9",
+    "@lit-protocol/types": "^7.0.0-alpha.9",
     "@lit-protocol/wrapped-keys": "^6.11.0"
   },
   "engines": {
@@ -44,10 +47,10 @@
   },
   "devDependencies": {
     "@lit-protocol/accs-schemas": "0.0.15",
-    "@lit-protocol/constants": "7.0.0-alpha.6",
-    "@lit-protocol/contracts-sdk": "7.0.0-alpha.6",
-    "@lit-protocol/lit-node-client": "7.0.0-alpha.6",
-    "@lit-protocol/types": "7.0.0-alpha.6",
+    "@lit-protocol/constants": "7.0.0-alpha.9",
+    "@lit-protocol/contracts-sdk": "7.0.0-alpha.9",
+    "@lit-protocol/lit-node-client": "7.0.0-alpha.9",
+    "@lit-protocol/types": "7.0.0-alpha.9",
     "@lit-protocol/wrapped-keys": "^6.11.0",
     "@types/jszip": "^3.4.0",
     "buffer": "^6.0.3",
