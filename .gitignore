@@ -8,3 +8,5 @@ generated
 .DS_Store
 accessToken.json
 mintPKP.json
+dev-scripts
+test

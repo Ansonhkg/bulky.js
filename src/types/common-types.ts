@@ -1,7 +1,7 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LitContracts } from '@lit-protocol/contracts-sdk';
 import { AuthSig, SessionSigsMap } from '@lit-protocol/types';
-import { PKG, PkgReturnTypes, PkgSteps } from '../plugins/plugins';
+import { PKG, PKG_VALUES, PkgReturnTypes, PkgSteps } from '../plugins/plugins';
 import { ObjectMapFromArray } from './utils';
 
 // ----- BULKIE FUNCTIONS
@@ -22,9 +22,30 @@ export const NATIVE_FN_VALUES = [
 export const NATIVE_FNS = ObjectMapFromArray(NATIVE_FN_VALUES);
 
 // ----- FUNCTIONS
-export const FN = {
-  ...NATIVE_FNS,
-  ...PKG,
+export const FN = ObjectMapFromArray([
+  ...NATIVE_FN_VALUES,
+  ...PKG_VALUES,
+]);
+
+// ----- DEPENDENCIES MAP
+export type DependenciesMap = Record<keyof typeof FN, (keyof typeof FN)[]>;
+
+export const DEPENDENCIES_MAP: DependenciesMap = {
+  ['connectToLitNodeClient']: [],
+  ['connectToLitContracts']: ['connectToLitNodeClient'],
+  ['mintPKP']: ['connectToLitContracts'],
+  ['mintCreditsNFT']: ['connectToLitContracts'],
+  ['createCreditsDelegationToken']: ['connectToLitNodeClient'],
+  ['createAccessToken']: ['connectToLitNodeClient'],
+  ['grantAuthMethodToUsePKP']: ['connectToLitNodeClient'],
+  ['grantIPFSCIDtoUsePKP']: ['connectToLitNodeClient'],
+  ['getPkps']: ['connectToLitNodeClient'],
+  ['toExecuteJs']: ['connectToLitNodeClient'],
+  ['toPkpSign']: ['connectToLitNodeClient'],
+  ['wrapped-keys/generate-private-key']: ['connectToLitNodeClient'],
+  ['orbisdb/key-management/read']: ['connectToLitNodeClient'],
+  ['orbisdb/key-management/register']: ['connectToLitNodeClient'],
+  ['orbisdb/key-management/use']: ['connectToLitNodeClient'],
 } as const;
 
 export const STEP = {
