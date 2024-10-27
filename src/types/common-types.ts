@@ -35,7 +35,7 @@ export const DEPENDENCIES_MAP: DependenciesMap = {
   ['connectToLitContracts']: ['connectToLitNodeClient'],
   ['mintPKP']: ['connectToLitContracts'],
   ['mintCreditsNFT']: ['connectToLitContracts'],
-  ['createCreditsDelegationToken']: ['connectToLitNodeClient'],
+  ['createCreditsDelegationToken']: ['connectToLitNodeClient', 'mintCreditsNFT'],
   ['createAccessToken']: ['connectToLitNodeClient'],
   ['grantAuthMethodToUsePKP']: ['connectToLitNodeClient'],
   ['grantIPFSCIDtoUsePKP']: ['connectToLitNodeClient'],

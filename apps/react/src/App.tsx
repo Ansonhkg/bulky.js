@@ -5,8 +5,9 @@ import { Bulkie, BulkieBrowser, DEPENDENCIES_MAP, FN } from 'bulkie.js';
 type DependenciesMap = {
   [key in keyof typeof FN]: {
     id: key;
-    action: () => Promise<any>;
+    action: (cache?: boolean) => Promise<any>;
     dependencies: (keyof typeof FN)[];
+    cachable?: boolean;
   };
 };
 
@@ -32,16 +33,19 @@ const BulkieSDKDashboard: React.FC = () => {
       id: 'mintPKP',
       action: mintPKP,
       dependencies: DEPENDENCIES_MAP['mintPKP'],
+      cachable: true,
     },
     'mintCreditsNFT': {
       id: 'mintCreditsNFT',
       action: mintCredits,
       dependencies: DEPENDENCIES_MAP['mintCreditsNFT'],
+      cachable: true,
     },
     'createCreditsDelegationToken': {
       id: 'createCreditsDelegationToken',
       action: createDelegation,
       dependencies: DEPENDENCIES_MAP['createCreditsDelegationToken'],
+      cachable: true,
     },
     'grantAuthMethodToUsePKP': {
       id: 'grantAuthMethodToUsePKP',
@@ -60,18 +64,52 @@ const BulkieSDKDashboard: React.FC = () => {
 
   const renderFunctions = () => {
     return Object.values(functionMap).map((func, key) => (
-      <button
-        key={func.id}
-        id={func.id}
-        className={`step ${areDependenciesMet(func.dependencies) ? '' : 'disabled'}`}
-        disabled={!areDependenciesMet(func.dependencies)}
-        onClick={async () => {
-          await func.action();
-          setCompletedFunctions(prev => new Set(prev.add(func.id)));
-        }}
-      >
-        {func.id}
-      </button>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button
+          key={func.id}
+          id={func.id}
+          className={`step ${areDependenciesMet(func.dependencies) ? '' : 'disabled'}`}
+          disabled={!areDependenciesMet(func.dependencies)}
+          onClick={async () => {
+            await func.action();
+            setCompletedFunctions(prev => new Set(prev.add(func.id)));
+          }}
+        >
+          {func.id}
+        </button>
+        {
+          func.cachable && (
+            <>
+              <button
+                style={{ backgroundColor: '#27233B', border: 'none' }}
+                key={`${func.id}-cache`}
+                id={`${func.id}-cache`}
+                className={`step ${areDependenciesMet(func.dependencies) ? '' : 'disabled'}`}
+                disabled={!areDependenciesMet(func.dependencies)}
+                onClick={async () => {
+                  await func.action(true); // Changed to pass a boolean instead of an object
+                  setCompletedFunctions(prev => new Set(prev.add(func.id)));
+                }}
+              >
+                {func.id} with cache
+              </button>
+              <button
+                style={{ backgroundColor: '#27233B', border: 'none' }}
+                key={`${func.id}-use-cache`}
+                id={`${func.id}-use-cache`}
+                className={`step ${areDependenciesMet(func.dependencies) ? '' : 'disabled'}`}
+                disabled={!areDependenciesMet(func.dependencies)}
+                onClick={async () => {
+                  await func.action(true); // Changed to pass a boolean instead of an object
+                  setCompletedFunctions(prev => new Set(prev.add(func.id)));
+                }}
+              >
+                use cache
+              </button>
+            </>
+          )
+        }
+      </div>
     ));
   };
 
@@ -113,11 +151,11 @@ const BulkieSDKDashboard: React.FC = () => {
     }
   }
 
-  async function mintPKP() {
+  async function mintPKP(cache: boolean = false) {
     if (!alice) return showStatus("Please connect to Lit Node Client first", "error");
     try {
       showStatus("Minting PKP...", "active");
-      await alice.mintPKP({ selfFund: true, amountInEth: "0.0001", cache: true });
+      await alice.mintPKP({ selfFund: true, amountInEth: "0.0001", cache });
       showStatus("PKP minted successfully!", "success");
     } catch (error: any) {
       console.error("Error:", error);
