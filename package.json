@@ -22,7 +22,7 @@
     "build:esm": "tsc --project tsconfig.esm.json",
     "build:types": "tsc --project tsconfig.types.json",
     "build:umd": "webpack --config webpack.config.js && bun run make:copies",
-    "make:copies": "cp ./dist/bulkie.min.js ./apps/dev/bulkie.min.js && cp ./dist/bulkie-browser.min.js ./apps/dev/bulkie-browser.min.js"
+    "make:copies": "cp ./dist/bulkie.min.js ./apps/html/bulkie.min.js && cp ./dist/bulkie-browser.min.js ./apps/html/bulkie-browser.min.js"
   },
   "files": [
     "dist"
@@ -37,10 +37,10 @@
   },
   "peerDependencies": {
     "@lit-protocol/accs-schemas": "^0.0.15",
-    "@lit-protocol/constants": "^7.0.0-alpha.9",
-    "@lit-protocol/contracts-sdk": "^7.0.0-alpha.9",
-    "@lit-protocol/lit-node-client": "^7.0.0-alpha.9",
-    "@lit-protocol/types": "^7.0.0-alpha.9",
+    "@lit-protocol/constants": "^7.0.2",
+    "@lit-protocol/contracts-sdk": "^7.0.2",
+    "@lit-protocol/lit-node-client": "^7.0.2",
+    "@lit-protocol/types": "^7.0.2",
     "@lit-protocol/wrapped-keys": "^6.11.0"
   },
   "engines": {
@@ -48,10 +48,10 @@
   },
   "devDependencies": {
     "@lit-protocol/accs-schemas": "0.0.15",
-    "@lit-protocol/constants": "7.0.0-alpha.9",
-    "@lit-protocol/contracts-sdk": "7.0.0-alpha.9",
-    "@lit-protocol/lit-node-client": "7.0.0-alpha.9",
-    "@lit-protocol/types": "7.0.0-alpha.9",
+    "@lit-protocol/constants": "7.0.2",
+    "@lit-protocol/contracts-sdk": "7.0.2",
+    "@lit-protocol/lit-node-client": "7.0.2",
+    "@lit-protocol/types": "7.0.2",
     "@lit-protocol/wrapped-keys": "^6.11.0",
     "@types/jszip": "^3.4.0",
     "@walletconnect/modal": "^2.7.0",
