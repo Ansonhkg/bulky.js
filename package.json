@@ -54,6 +54,7 @@
     "@lit-protocol/types": "7.0.0-alpha.9",
     "@lit-protocol/wrapped-keys": "^6.11.0",
     "@types/jszip": "^3.4.0",
+    "@walletconnect/modal": "^2.7.0",
     "buffer": "^6.0.3",
     "concurrently": "^9.0.1",
     "crypto-browserify": "^3.12.1",
@@ -62,6 +63,7 @@
     "terser-webpack-plugin": "^5.3.10",
     "ts-loader": "^9.5.1",
     "util": "^0.12.5",
+    "vm-browserify": "^1.1.2",
     "webpack": "^5.95.0",
     "webpack-cli": "^5.1.4"
   }
